@@ -14,7 +14,7 @@ Created: 2026-11-19 · Approach: frontend-first, backed by a mock data layer
 | F0 | Setup, design tokens, mock data layer, seed, mock login | Foundation | ✅ | 7 / 7 |
 | F1 | Scenario video engine POC | Gate 2 / §7.1 | 🟨 | 8 / 9 |
 | F2 | App shell & auth screens | Auth & RBAC (UI) | ✅ | 7 / 7 |
-| F3 | Learner experience | Learner half of MVP test | ⬜ | 0 / 8 |
+| F3 | Learner experience | Learner half of MVP test | ✅ | 8 / 8 |
 | F4 | Facility Admin | Admin half of MVP test | ⬜ | 0 / 7 |
 | F5 | Super Admin & content editor | Data-driven content | ⬜ | 0 / 9 |
 | F6 | Public marketing website | Website + lead capture | ⬜ | 0 / 7 |
@@ -83,14 +83,14 @@ Created: 2026-11-19 · Approach: frontend-first, backed by a mock data layer
 ### F3 — Learner
 | ID | Task | Status | Notes |
 |---|---|---|---|
-| F3.1 | Learner dashboard: welcome, assigned training cards, status, Start/Continue | ⬜ | |
-| F3.2 | Assigned Training list | ⬜ | |
-| F3.3 | Module intro page (title, objectives, Start) | ⬜ | |
-| F3.4 | Module player integrating F1 engine with multiple checkpoints | ⬜ | |
-| F3.5 | Knowledge check (multiple choice) | ⬜ | |
-| F3.6 | Result screen: score, pass/fail, retry per D6 | ⬜ | |
-| F3.7 | My Progress: completed / in progress / results, recent activity | ⬜ | |
-| F3.8 | Read-only revisit of completed modules | ⬜ | D7 |
+| F3.1 | Learner dashboard: welcome, assigned training cards, status, Start/Continue | ✅ | Counts, "continue where you left off", cards, recent activity, empty state |
+| F3.2 | Assigned Training list | ✅ | Filter by status |
+| F3.3 | Module intro page (title, objectives, Start) | ✅ | Also shows status, progress and attempts |
+| F3.4 | Module player integrating F1 engine with multiple checkpoints | ✅ | `/learn/training/[id]/play`; "Take knowledge check" after the finish is saved |
+| F3.5 | Knowledge check (multiple choice) | ✅ | Unlocks after the video; answer key never sent to the browser; scored server-side |
+| F3.6 | Result screen: score, pass/fail, retry per D6 | ✅ | Correct answers shown only after a pass; attempt limit + lock-out supported |
+| F3.7 | My Progress: completed / in progress / results, recent activity | ✅ | |
+| F3.8 | Read-only revisit of completed modules | ✅ | D7. "Your decisions" review, review-mode replay, no retakes after passing |
 
 ### F4 — Facility Admin
 | ID | Task | Status | Notes |
@@ -181,6 +181,7 @@ Created: 2026-11-19 · Approach: frontend-first, backed by a mock data layer
 | Date | Change |
 |---|---|
 | 2026-11-19 | Plan created; defaults D1–D14 agreed |
+| 2026-11-19 | F3 complete: learner dashboard, training list, module intro/review, player, knowledge check + results, My Progress. New `listMyTraining` view-model endpoint and learner rules with 18 new unit tests (41 total). Fixed a player race that could drop the "video finished" save. `/poc` kept for the Gate 2 demo |
 | 2026-11-19 | F2 complete: role areas `/admin`, `/facility`, `/learn` + `/profile`; route guard; login/forgot/reset/set-password; profile. Temporary `/dashboard` removed (its scoped-data preview now sits on each role dashboard). Mock DB version 3 (per-user passwords, auth tokens, demo outbox). Next.js instant-navigation validation set to opt-in |
 | 2026-11-19 | F1 built (8/9): scenario player, pure engine with 17 unit tests, provider adapter, `/poc` page with §7.1 checklist and demo debug panel. Cross-browser testing (F1.9) still open. Mock DB version bumped to 2 (sample video duration corrected to 635 s) |
 | 2026-11-19 | F0 complete: Next.js app in `web/`, mock data layer, seed data, demo login/toolbar. Temporary `/dashboard` preview shows scoped data per account. Added `Lead` and `ActivityEvent` types (not in §8) for D9 and F5.8 |

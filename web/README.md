@@ -14,6 +14,7 @@ Other scripts: `npm run build`, `npm run lint`, `npm test` (Vitest unit tests).
 Video engine proof of concept: sign in as Jordan Lee or Alex Rivera and open `/poc`.
 
 Signed-in areas: `/admin` (Super Admin), `/facility` (Facility Admin), `/learn` (Learner), `/profile` (everyone).
+Full learner journey: sign in as Jordan Lee (not started) or Alex Rivera (one in progress, one completed); Casey Diaz has nothing assigned.
 Try the invite flow with Chris Park ("Open invite" on the login page) and the reset flow via "Forgot your password?"
 — in demo mode the "email" link is shown on screen.
 
@@ -44,6 +45,8 @@ src/
   lib/auth/roles.ts     role areas, per-role nav, canAccess()
   lib/auth/password.ts  password rules, safe `next=` redirects
   lib/player/           video engine: pure rules (engine.ts, unit-tested) + provider adapter
+  lib/learning.ts       scoring, module status and next-step rules (unit-tested)
+  components/learner/   learner dashboard, training list, module, player page, knowledge check, progress
   components/player/    ScenarioPlayer, CheckpointPanel, Timeline
 ```
 
