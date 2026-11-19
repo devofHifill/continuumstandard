@@ -167,6 +167,10 @@ export interface ActivityEvent {
   id: ID;
   type:
     | "FACILITY_CREATED"
+    | "FACILITY_DEACTIVATED"
+    | "FACILITY_REACTIVATED"
+    | "CONTENT_UPDATED"
+    | "MODULE_STATUS_CHANGED"
     | "USER_CREATED"
     | "USER_DEACTIVATED"
     | "USER_REACTIVATED"

@@ -116,16 +116,17 @@ export function LearnerActionButtons({
   );
 }
 
-/** Demo mode: show the invite "email" link so the flow can be tried without a mail server. */
+/** Demo mode: show the latest invite/reset "email" link so the flow can be tried without a mail server. */
 export function DemoInviteLink({ email }: { email: string }) {
   if (!DEMO_TOOLS_ENABLED) return null;
   const mail = latestEmailTo(email);
-  if (!mail?.link.startsWith("/set-password")) return null;
+  const kind = mail?.link.startsWith("/set-password") ? "invite" : mail?.link.startsWith("/reset-password") ? "reset" : null;
+  if (!mail || !kind) return null;
   return (
     <span className="text-xs">
       Demo inbox:{" "}
       <Link href={mail.link} className="font-medium text-primary underline">
-        open invite link
+        open {kind} link
       </Link>{" "}
       (sign out first)
     </span>

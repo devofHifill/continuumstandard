@@ -46,7 +46,7 @@ function managedLearner(s: Session, userId: ID): User {
   return user;
 }
 
-function validateInput(input: LearnerInput, exceptUserId?: ID): LearnerInput {
+export function validateInput(input: LearnerInput, exceptUserId?: ID): LearnerInput {
   const name = input.name.trim();
   const email = input.email.trim().toLowerCase();
   const jobTitle = input.jobTitle?.trim() || undefined;
@@ -60,12 +60,12 @@ function validateInput(input: LearnerInput, exceptUserId?: ID): LearnerInput {
   return { name, email, jobTitle };
 }
 
-function actorName(db: MockDb, s: Session) {
+export function actorName(db: MockDb, s: Session) {
   return db.users.find((u) => u.id === s.userId)?.name ?? "An administrator";
 }
 
 /** Issue a fresh invite link (replacing older unused ones) and "email" it. */
-function issueInvite(d: MockDb, user: User) {
+export function issueInvite(d: MockDb, user: User) {
   const token = randomToken();
   d.authTokens = d.authTokens.filter((t) => !(t.userId === user.id && t.purpose === "INVITE" && !t.usedAt));
   d.authTokens.push({
@@ -86,7 +86,7 @@ function issueInvite(d: MockDb, user: User) {
 // ── Reads ─────────────────────────────────────────────────
 
 /** Every assignment in a facility as a report row (the base for lists, progress and the summary). */
-function assignmentRows(db: MockDb, facilityId: ID): AssignmentRow[] {
+export function assignmentRows(db: MockDb, facilityId: ID): AssignmentRow[] {
   const users = new Map(db.users.map((u) => [u.id, u]));
   return db.assignments
     .filter((a) => a.facilityId === facilityId)

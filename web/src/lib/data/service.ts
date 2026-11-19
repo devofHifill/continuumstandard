@@ -1,3 +1,4 @@
+import type { AssessmentDraft, CheckpointDraft } from "@/lib/content";
 import type { NextStep } from "@/lib/learning";
 import type {
   ActivityEvent,
@@ -6,6 +7,9 @@ import type {
   DecisionCheckpoint,
   Facility,
   ID,
+  KnowledgeAssessment,
+  Lead,
+  ModuleStatus,
   ScenarioVideo,
   LearnerProgress,
   ProgressStatus,
@@ -118,6 +122,42 @@ export interface DataService {
   listFacilityAssignments(facilityId?: ID): Promise<AssignmentRow[]>;
   /** One learner's full training record: every assignment with progress, decisions and attempts. */
   getLearnerReport(userId: ID): Promise<LearnerReport>;
+
+  // ── Platform administration (F5, Super Admin only) ──────
+  getPlatformSummary(): Promise<PlatformSummary>;
+  listFacilityRows(): Promise<FacilityRow[]>;
+  createFacility(input: FacilityInput): Promise<Facility>;
+  updateFacility(id: ID, input: FacilityInput): Promise<Facility>;
+  /** Switching a facility off signs out its users and blocks sign-in; nothing is deleted. */
+  setFacilityActive(id: ID, active: boolean): Promise<Facility>;
+  listFacilityAdmins(): Promise<AdminRow[]>;
+  /** New Facility Admin = INVITED + emailed set-password link (D8, D11: several per facility allowed). */
+  createFacilityAdmin(input: AdminInput): Promise<User>;
+  updateFacilityAdmin(id: ID, input: Omit<AdminInput, "facilityId">): Promise<User>;
+  setAdminActive(id: ID, active: boolean): Promise<User>;
+  resendAdminInvite(id: ID): Promise<void>;
+  /** "Reset access": email an active Facility Admin a password-reset link. */
+  sendAdminPasswordReset(id: ID): Promise<void>;
+  listActivity(filter?: { facilityId?: ID; type?: ActivityEvent["type"]; limit?: number }): Promise<ActivityEvent[]>;
+  /** Demo requests from the public website (D9). */
+  listLeads(): Promise<Lead[]>;
+
+  // ── Training content (F5, Super Admin only — D12) ───────
+  listModuleRows(): Promise<ModuleRow[]>;
+  getModuleForEdit(id: ID): Promise<ModuleEditBundle>;
+  /** New modules start as DRAFT and can be saved incomplete. */
+  createModule(input: ModuleDetailsInput): Promise<TrainingModule>;
+  updateModuleDetails(id: ID, input: ModuleDetailsInput): Promise<TrainingModule>;
+  saveModuleVideo(id: ID, input: VideoInput): Promise<ScenarioVideo>;
+  /**
+   * Replace the module's decision points. Ids starting with "new-" are created.
+   * Removing a decision point or option that learners have already answered is refused.
+   */
+  saveCheckpoints(id: ID, checkpoints: CheckpointDraft[]): Promise<DecisionCheckpoint[]>;
+  /** Replace the knowledge check; questions/options already answered can't be removed. */
+  saveAssessment(id: ID, input: AssessmentDraft): Promise<KnowledgeAssessment>;
+  /** Publish (ACTIVE), unpublish to DRAFT (only if never assigned) or DISABLE (no new assignments). */
+  setModuleStatus(id: ID, status: ModuleStatus): Promise<TrainingModule>;
 
   // ── Demo tooling ────────────────────────────────────────
   /** Restore the seed data and sign out. Mock only; the real API won't have this. */
@@ -243,6 +283,85 @@ export interface AssignResult {
 export interface LearnerReport {
   learner: User;
   items: MyTrainingDetail[];
+}
+
+export interface FacilityInput {
+  name: string;
+  contactName: string;
+  contactEmail: string;
+  phone?: string;
+}
+
+export interface FacilityRow {
+  facility: Facility;
+  admins: number;
+  learners: number;
+  assignments: number;
+  completionPercent: number;
+}
+
+export interface PlatformSummary {
+  facilities: { active: number; inactive: number };
+  learners: { active: number; invited: number };
+  admins: number;
+  modules: { active: number; draft: number; disabled: number };
+  assignments: { total: number; completed: number };
+  completionPercent: number;
+  leads: number;
+  facilityRows: FacilityRow[];
+  recentActivity: ActivityEvent[];
+}
+
+export interface AdminInput {
+  name: string;
+  email: string;
+  jobTitle?: string;
+  facilityId: ID;
+}
+
+export interface AdminRow {
+  user: User;
+  facilityName: string;
+  facilityActive: boolean;
+}
+
+export interface ModuleRow {
+  module: TrainingModule;
+  hasVideo: boolean;
+  checkpointCount: number;
+  questionCount: number;
+  assignedCount: number;
+  completedCount: number;
+}
+
+export interface ModuleDetailsInput {
+  title: string;
+  description: string;
+  category: string;
+  learningObjectives: string[];
+  thumbnailUrl: string;
+  estimatedMinutes: number;
+}
+
+export interface VideoInput {
+  sourceUrl: string;
+  durationSec: number;
+  posterUrl?: string;
+  captionsUrl?: string;
+}
+
+export interface ModuleEditBundle {
+  module: TrainingModule;
+  video?: ScenarioVideo;
+  checkpoints: DecisionCheckpoint[];
+  assessment?: KnowledgeAssessment;
+  assignedCount: number;
+  /** Ids learners have already answered — the editor marks these as locked against removal. */
+  answeredCheckpointIds: ID[];
+  answeredOptionIds: ID[];
+  answeredQuestionIds: ID[];
+  /** What still blocks publishing (empty = ready). */
+  publishProblems: string[];
 }
 
 /** INVITE = first password for a new account; RESET = forgotten password. */

@@ -16,6 +16,7 @@ Video engine proof of concept: sign in as Jordan Lee or Alex Rivera and open `/p
 Signed-in areas: `/admin` (Super Admin), `/facility` (Facility Admin), `/learn` (Learner), `/profile` (everyone).
 Full learner journey: sign in as Jordan Lee (not started) or Alex Rivera (one in progress, one completed); Casey Diaz has nothing assigned.
 Facility admin: Dana Whitfield (Harbor Light) or Sam Okafor (Pinecrest) — add a learner, open their invite from the demo notice, assign training, then check Learner Progress.
+Super Admin: Platform Admin — create facilities and their admins, and build a module in Training Content → New module ("Use sample stream" for the video).
 Try the invite flow with Chris Park ("Open invite" on the login page) and the reset flow via "Forgot your password?"
 — in demo mode the "email" link is shown on screen.
 
@@ -49,6 +50,8 @@ src/
   lib/learning.ts       scoring, module status and next-step rules (unit-tested)
   components/learner/   learner dashboard, training list, module, player page, knowledge check, progress
   components/facility/  facility admin dashboard, learners, learner detail, assignments, progress report
+  components/admin/     super admin pages and the module editor (editor/)
+  lib/content.ts        content validation + publish checklist (unit-tested)
   components/player/    ScenarioPlayer, CheckpointPanel, Timeline
 ```
 
