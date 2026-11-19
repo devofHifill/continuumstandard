@@ -169,6 +169,8 @@ export interface ActivityEvent {
     | "FACILITY_CREATED"
     | "USER_CREATED"
     | "USER_DEACTIVATED"
+    | "USER_REACTIVATED"
+    | "INVITE_SENT"
     | "MODULE_ASSIGNED"
     | "MODULE_STARTED"
     | "MODULE_COMPLETED"

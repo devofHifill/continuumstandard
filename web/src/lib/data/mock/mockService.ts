@@ -20,6 +20,7 @@ import {
   toSession,
   validToken,
 } from "./helpers";
+import * as facility from "./facility";
 import * as learner from "./learner";
 import { getDb, getStoredSession, resetStore, setStoredSession, subscribe, updateDb } from "./store";
 
@@ -320,6 +321,17 @@ export class MockDataService implements DataService {
   getMyAssessment = learner.getMyAssessment;
   submitAssessment = learner.submitAssessment;
   listMyActivity = learner.listMyActivity;
+
+  // ── Facility administration (F4) — implemented in ./facility.ts ──
+  getFacilitySummary = facility.getFacilitySummary;
+  listFacilityLearners = facility.listFacilityLearners;
+  createLearner = facility.createLearner;
+  updateLearner = facility.updateLearner;
+  setLearnerActive = facility.setLearnerActive;
+  resendInvite = facility.resendInvite;
+  assignTraining = facility.assignTraining;
+  listFacilityAssignments = facility.listFacilityAssignments;
+  getLearnerReport = facility.getLearnerReport;
 
   // ── Demo tooling ────────────────────────────────────────
   async resetDemoData() {

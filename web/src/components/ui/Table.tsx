@@ -1,10 +1,14 @@
 import clsx from "clsx";
 import type { HTMLAttributes, TdHTMLAttributes, ThHTMLAttributes } from "react";
 
-/** Wraps the table so wide tables scroll inside their card, not the whole page. */
+/**
+ * Wraps the table so wide tables scroll inside their card, not the whole page.
+ * `relative` keeps absolutely-positioned children (e.g. sr-only labels) inside the
+ * scroll box — without it they escape and widen the page on phones.
+ */
 export function Table({ className, ...rest }: HTMLAttributes<HTMLTableElement>) {
   return (
-    <div className="overflow-x-auto">
+    <div className="relative overflow-x-auto">
       <table className={clsx("w-full border-collapse text-sm", className)} {...rest} />
     </div>
   );
