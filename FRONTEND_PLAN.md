@@ -12,7 +12,7 @@ Created: 2026-11-19 · Approach: frontend-first, backed by a mock data layer
 | Phase | Scope | Proves | Status | Done / Total |
 |---|---|---|---|---|
 | F0 | Setup, design tokens, mock data layer, seed, mock login | Foundation | ✅ | 7 / 7 |
-| F1 | Scenario video engine POC | Gate 2 / §7.1 | ⬜ | 0 / 9 |
+| F1 | Scenario video engine POC | Gate 2 / §7.1 | 🟨 | 8 / 9 |
 | F2 | App shell & auth screens | Auth & RBAC (UI) | ⬜ | 0 / 7 |
 | F3 | Learner experience | Learner half of MVP test | ⬜ | 0 / 8 |
 | F4 | Facility Admin | Admin half of MVP test | ⬜ | 0 / 7 |
@@ -59,15 +59,15 @@ Created: 2026-11-19 · Approach: frontend-first, backed by a mock data layer
 ### F1 — Scenario video engine POC (Gate 2)
 | ID | Task | Status | Notes |
 |---|---|---|---|
-| F1.1 | Video player component with provider adapter (HTML5 + hls.js) | ⬜ | |
-| F1.2 | Sample module with one video and a checkpoint at 00:30 | ⬜ | |
-| F1.3 | Auto-pause when the checkpoint timestamp is reached | ⬜ | |
-| F1.4 | Checkpoint overlay: question + 4 options, blocks skipping | ⬜ | |
-| F1.5 | Save selected answer + submission time | ⬜ | |
-| F1.6 | Show approved feedback/rationale → Continue resumes from the correct position | ⬜ | |
-| F1.7 | Progress persists after refresh/revisit (resume position, answered checkpoints) | ⬜ | |
-| F1.8 | Seeking rules (D4), repeat visits, network interruption handling | ⬜ | |
-| F1.9 | Test in Chrome, Edge, Firefox, Safari + throttled network | ⬜ | Gate 2 sign-off |
+| F1.1 | Video player component with provider adapter (HTML5 + hls.js) | ✅ | `ScenarioPlayer` + `videoSource.ts`; custom controls, keyboard, fullscreen, captions track support |
+| F1.2 | Sample module with one video and a checkpoint at 00:30 | ✅ | `mod-intake` on `/poc` (Mux public test stream, 10:34) |
+| F1.3 | Auto-pause when the checkpoint timestamp is reached | ✅ | Measured 30.000 s; rAF loop + `timeupdate` fallback |
+| F1.4 | Checkpoint overlay: question + 4 options, blocks skipping | ✅ | Play/seek locked; overlay on desktop, panel below video on phones |
+| F1.5 | Save selected answer + submission time | ✅ | Idempotent: first answer wins |
+| F1.6 | Show approved feedback/rationale → Continue resumes from the correct position | ✅ | General + optional per-option rationale (D5) |
+| F1.7 | Progress persists after refresh/revisit (resume position, answered checkpoints) | ✅ | Refresh mid-question reopens the question |
+| F1.8 | Seeking rules (D4), repeat visits, network interruption handling | ✅ | Seek clamp + snap-back; answered points not re-asked; save-failure retry; hls.js reconnect |
+| F1.9 | Test in Chrome, Edge, Firefox, Safari + throttled network | 🟨 | Done in the app's Chromium (native-HLS and hls.js paths, simulated save failures). **Still to do:** real Safari/iOS, Firefox, Edge and a throttled network — needs a person with those browsers. Gate 2 sign-off pending |
 
 ### F2 — App shell & auth screens
 | ID | Task | Status | Notes |
@@ -181,4 +181,5 @@ Created: 2026-11-19 · Approach: frontend-first, backed by a mock data layer
 | Date | Change |
 |---|---|
 | 2026-11-19 | Plan created; defaults D1–D14 agreed |
+| 2026-11-19 | F1 built (8/9): scenario player, pure engine with 17 unit tests, provider adapter, `/poc` page with §7.1 checklist and demo debug panel. Cross-browser testing (F1.9) still open. Mock DB version bumped to 2 (sample video duration corrected to 635 s) |
 | 2026-11-19 | F0 complete: Next.js app in `web/`, mock data layer, seed data, demo login/toolbar. Temporary `/dashboard` preview shows scoped data per account. Added `Lead` and `ActivityEvent` types (not in §8) for D9 and F5.8 |

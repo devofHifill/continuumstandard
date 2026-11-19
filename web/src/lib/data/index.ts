@@ -7,4 +7,10 @@ import type { DataService } from "./service";
  */
 export const data: DataService = new MockDataService();
 
-export { ServiceError, type DataService } from "./service";
+export {
+  ServiceError,
+  type CheckpointResult,
+  type DataService,
+  type PlaybackBundle,
+  type ProgressUpdate,
+} from "./service";

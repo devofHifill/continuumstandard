@@ -27,3 +27,6 @@ export function listDemoAccounts(): DemoAccount[] {
 }
 
 export const demoPassword = DEMO_PASSWORD;
+
+/** Make mock writes fail, to test how the UI handles a dropped connection. */
+export { getNetworkFailure, setNetworkFailure } from "./store";
