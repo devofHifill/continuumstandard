@@ -31,7 +31,7 @@ const summary = (a: { id: ID; scorePercent: number; passed: boolean; submittedAt
 });
 
 /** Build one training row — the "view model" a card or page needs, computed server-side. */
-function buildItem(db: MockDb, userId: ID, moduleId: ID, assignedAt: string): MyTrainingItem | null {
+export function buildItem(db: MockDb, userId: ID, moduleId: ID, assignedAt: string): MyTrainingItem | null {
   const mod = db.modules.find((m) => m.id === moduleId);
   if (!mod) return null;
   const video = db.videos.find((v) => v.moduleId === moduleId);
@@ -79,22 +79,28 @@ export async function listMyTraining() {
   return delay(clone(items));
 }
 
-export async function getMyTraining(moduleId: ID) {
-  const s = requireLearner();
-  assertAssigned(s, moduleId);
-  const db = getDb();
-  const assignment = db.assignments.find((a) => a.userId === s.userId && a.moduleId === moduleId)!;
-  const item = buildItem(db, s.userId, moduleId, assignment.assignedAt);
-  if (!item) notFound("Module");
+/** One module for one learner, plus their decision-point answers. Shared with the admin reports (F4). */
+export function buildDetail(db: MockDb, userId: ID, moduleId: ID): MyTrainingDetail | null {
+  const assignment = db.assignments.find((a) => a.userId === userId && a.moduleId === moduleId);
+  if (!assignment) return null;
+  const item = buildItem(db, userId, moduleId, assignment.assignedAt);
+  if (!item) return null;
   const video = db.videos.find((v) => v.moduleId === moduleId);
   const decisions = db.checkpoints
     .filter((c) => c.videoId === video?.id)
     .sort((a, b) => a.timestampSec - b.timestampSec)
     .map((checkpoint) => ({
       checkpoint,
-      response: db.checkpointResponses.find((r) => r.userId === s.userId && r.checkpointId === checkpoint.id),
+      response: db.checkpointResponses.find((r) => r.userId === userId && r.checkpointId === checkpoint.id),
     }));
-  const detail: MyTrainingDetail = { ...item, decisions };
+  return { ...item, decisions };
+}
+
+export async function getMyTraining(moduleId: ID) {
+  const s = requireLearner();
+  assertAssigned(s, moduleId);
+  const detail = buildDetail(getDb(), s.userId, moduleId);
+  if (!detail) notFound("Module");
   return delay(clone(detail));
 }
 

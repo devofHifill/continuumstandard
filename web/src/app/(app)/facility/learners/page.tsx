@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
-import { ComingSoon, PageHeader } from "@/components/shell/PageHeader";
+import { Suspense } from "react";
+import { LearnersPage } from "@/components/facility/LearnersPage";
 
 export const metadata: Metadata = { title: "Learners" };
 
 export default function Page() {
+  // LearnersPage reads ?new=1 with useSearchParams, which needs a Suspense boundary.
   return (
-    <>
-      <PageHeader title="Learners" description="Staff in your facility." />
-      <ComingSoon phase="F4" items={["Learner roster with search and filters", "Add, edit and deactivate learners (sends an invite)"]} />
-    </>
+    <Suspense fallback={<p className="text-sm text-muted">Loading…</p>}>
+      <LearnersPage />
+    </Suspense>
   );
 }

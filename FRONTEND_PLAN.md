@@ -15,7 +15,7 @@ Created: 2026-11-19 · Approach: frontend-first, backed by a mock data layer
 | F1 | Scenario video engine POC | Gate 2 / §7.1 | 🟨 | 8 / 9 |
 | F2 | App shell & auth screens | Auth & RBAC (UI) | ✅ | 7 / 7 |
 | F3 | Learner experience | Learner half of MVP test | ✅ | 8 / 8 |
-| F4 | Facility Admin | Admin half of MVP test | ⬜ | 0 / 7 |
+| F4 | Facility Admin | Admin half of MVP test | ✅ | 7 / 7 |
 | F5 | Super Admin & content editor | Data-driven content | ⬜ | 0 / 9 |
 | F6 | Public marketing website | Website + lead capture | ⬜ | 0 / 7 |
 | F7 | QA & polish | Definition of Done | ⬜ | 0 / 7 |
@@ -95,13 +95,13 @@ Created: 2026-11-19 · Approach: frontend-first, backed by a mock data layer
 ### F4 — Facility Admin
 | ID | Task | Status | Notes |
 |---|---|---|---|
-| F4.1 | Dashboard: facility summary, quick actions | ⬜ | |
-| F4.2 | Learner roster with search/filter | ⬜ | |
-| F4.3 | Add / edit / deactivate learner (sends invite per D8) | ⬜ | |
-| F4.4 | Assign training: select learners × modules (active modules only) | ⬜ | D3 |
-| F4.5 | Assignments list with status | ⬜ | |
-| F4.6 | Learner Progress: status + assessment results, filters | ⬜ | |
-| F4.7 | Learner detail: assignments, checkpoint responses, attempts | ⬜ | |
+| F4.1 | Dashboard: facility summary, quick actions | ✅ | Learners, assignments, completion %, average score, "needs attention", activity |
+| F4.2 | Learner roster with search/filter | ✅ | Search by name/email/job title; filter by account status |
+| F4.3 | Add / edit / deactivate learner (sends invite per D8) | ✅ | Also reactivate and resend invite; emails unique platform-wide |
+| F4.4 | Assign training: select learners × modules (active modules only) | ✅ | D3. Idempotent; shows "already has this"; preselect from learner page |
+| F4.5 | Assignments list with status | ✅ | |
+| F4.6 | Learner Progress: status + assessment results, filters | ✅ | Per-module summary; filter by module, status, "needs attention", learner |
+| F4.7 | Learner detail: assignments, checkpoint responses, attempts | ✅ | |
 
 ### F5 — Super Admin & content
 | ID | Task | Status | Notes |
@@ -181,6 +181,7 @@ Created: 2026-11-19 · Approach: frontend-first, backed by a mock data layer
 | Date | Change |
 |---|---|
 | 2026-11-19 | Plan created; defaults D1–D14 agreed |
+| 2026-11-19 | F4 complete: Facility Admin dashboard, learners (add/edit/deactivate/reactivate/resend invite), learner detail, assign training, assignments list, progress report. **MVP success test passes end to end in the browser.** 13 new unit tests for tenant isolation and admin rules (54 total). Fixed tables widening the page on phones |
 | 2026-11-19 | F3 complete: learner dashboard, training list, module intro/review, player, knowledge check + results, My Progress. New `listMyTraining` view-model endpoint and learner rules with 18 new unit tests (41 total). Fixed a player race that could drop the "video finished" save. `/poc` kept for the Gate 2 demo |
 | 2026-11-19 | F2 complete: role areas `/admin`, `/facility`, `/learn` + `/profile`; route guard; login/forgot/reset/set-password; profile. Temporary `/dashboard` removed (its scoped-data preview now sits on each role dashboard). Mock DB version 3 (per-user passwords, auth tokens, demo outbox). Next.js instant-navigation validation set to opt-in |
 | 2026-11-19 | F1 built (8/9): scenario player, pure engine with 17 unit tests, provider adapter, `/poc` page with §7.1 checklist and demo debug panel. Cross-browser testing (F1.9) still open. Mock DB version bumped to 2 (sample video duration corrected to 635 s) |

@@ -101,6 +101,24 @@ export interface DataService {
   /** The learner's own recent activity, newest first. */
   listMyActivity(limit?: number): Promise<ActivityEvent[]>;
 
+  // ── Facility administration (F4) ────────────────────────
+  // Facility Admins always act on their own facility (any `facilityId` they pass must match).
+  // A Super Admin must name the facility — so F5 can reuse these for platform admin.
+  getFacilitySummary(facilityId?: ID): Promise<FacilitySummary>;
+  listFacilityLearners(facilityId?: ID): Promise<FacilityLearnerRow[]>;
+  /** Create an INVITED learner and email them a set-password link (decision D8). */
+  createLearner(input: LearnerInput, facilityId?: ID): Promise<User>;
+  updateLearner(userId: ID, input: LearnerInput): Promise<User>;
+  /** Deactivate (history kept, sign-in blocked) or reactivate a learner. */
+  setLearnerActive(userId: ID, active: boolean): Promise<User>;
+  /** New invite link for a learner who hasn't set a password yet; the old link stops working. */
+  resendInvite(userId: ID): Promise<void>;
+  /** Assign every chosen ACTIVE module to every chosen learner (D3). Existing assignments are skipped. */
+  assignTraining(userIds: ID[], moduleIds: ID[]): Promise<AssignResult>;
+  listFacilityAssignments(facilityId?: ID): Promise<AssignmentRow[]>;
+  /** One learner's full training record: every assignment with progress, decisions and attempts. */
+  getLearnerReport(userId: ID): Promise<LearnerReport>;
+
   // ── Demo tooling ────────────────────────────────────────
   /** Restore the seed data and sign out. Mock only; the real API won't have this. */
   resetDemoData(): Promise<void>;
@@ -163,6 +181,68 @@ export interface AssessmentResult {
     correctLabel?: string;
     feedback?: string;
   }[];
+}
+
+export interface LearnerInput {
+  name: string;
+  email: string;
+  jobTitle?: string;
+}
+
+export interface FacilityLearnerRow {
+  user: User;
+  assigned: number;
+  notStarted: number;
+  inProgress: number;
+  completed: number;
+  lastActivityAt: string | null;
+}
+
+export interface AttentionItem {
+  kind: "INVITE_PENDING" | "LOCKED_OUT" | "FAILED_CHECK";
+  userId: ID;
+  userName: string;
+  moduleTitle?: string;
+  detail: string;
+}
+
+export interface FacilitySummary {
+  facility: Facility;
+  learners: { active: number; invited: number; deactivated: number };
+  assignments: { total: number; notStarted: number; inProgress: number; completed: number };
+  /** Completed ÷ total assignments, 0–100. */
+  completionPercent: number;
+  /** Average best score across learners who have taken a check, or null. */
+  averageScore: number | null;
+  attention: AttentionItem[];
+  recentActivity: ActivityEvent[];
+}
+
+export interface AssignmentRow {
+  assignmentId: ID;
+  learner: Pick<User, "id" | "name" | "email" | "status" | "jobTitle">;
+  module: Pick<TrainingModule, "id" | "title" | "category">;
+  assignedAt: string;
+  assignedByName: string;
+  status: ProgressStatus;
+  answeredCount: number;
+  checkpointCount: number;
+  bestScorePercent: number | null;
+  attemptsCount: number;
+  passPercent: number | null;
+  lockedOut: boolean;
+  completedAt?: string;
+}
+
+export interface AssignResult {
+  created: number;
+  /** Learner/module pairs that were already assigned. */
+  skipped: number;
+}
+
+export interface LearnerReport {
+  learner: User;
+  items: MyTrainingDetail[];
 }
 
 /** INVITE = first password for a new account; RESET = forgotten password. */

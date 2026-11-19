@@ -3,7 +3,7 @@
 > A beginner-friendly study guide and interview-prep notebook.
 > It teaches High-Level Design (HLD) and Low-Level Design (LLD) using a real project, and it is a **living document**: every real design decision made while building gets recorded in the [Design Decision Journal](#9-design-decision-journal-living-record).
 
-**Project status:** F0–F3 built: foundation, video engine POC, app shell & sign-in, and the full learner journey. F4 (Facility Admin) next (2026-11-19).
+**Project status:** F0–F4 built — the MVP success test (admin assigns → learner completes → admin sees the result) passes end to end on mock data. F5 (Super Admin & content editor) next (2026-11-19).
 Sections marked **📐 Planned** describe the intended design; they become **🛠 Built** once implemented.
 
 ---
@@ -244,6 +244,8 @@ POST /assessments/:id/attempts         { answers[] } → { score, passed }
 
 ### 5.3 Tenant scoping — the most important rule in the codebase
 
+**🛠 Built (F0–F4)** in the mock backend, with unit tests — see §5.10 for the real code. The real API must do the same on the server.
+
 **Problem:** Facility A's admin must never see Facility B's learners — even by typing a different ID into the URL.
 
 **Solution:** every query for facility data passes through one helper that adds the facility filter, using the facility from the **logged-in user**, never from the request.
@@ -463,6 +465,47 @@ Two small pure functions drive every screen: `deriveStatus()` (which state is it
 
 > 💡 **Beginner tip — a race condition we found:** the player used to *skip* a progress save if another was still running. If that happened exactly when the video ended, the "finished" flag was lost and the knowledge check stayed locked. Fix: a **promise queue** — saves run one after another, none dropped — and the "Take knowledge check" button appears only after the finish is saved.
 
+### 5.10 Facility administration
+
+**🛠 Built (F4)** — and with it, the **MVP success test passes end to end** in the browser:
+*Facility Admin adds a learner → assigns a module → learner accepts the invite, watches, answers, passes → Facility Admin sees "Completed, 80%".*
+
+```
+/facility                    summary cards, "needs attention", quick actions, activity
+/facility/learners           roster: search, status filter, add / edit / deactivate / resend invite
+/facility/learners/[id]      one learner's full record: every module, attempts, decision responses
+/facility/assignments        assign modules × learners; list of all assignments
+/facility/progress           per-module completion + filterable learner × module results
+```
+
+**How the tenant rule is implemented (§5.3, now real code in the mock):**
+
+```ts
+function resolveFacility(session, facilityId?) {
+  if (session.role === "LEARNER") throw FORBIDDEN;
+  if (session.role === "FACILITY_ADMIN") {
+    if (facilityId && facilityId !== session.facilityId) throw NOT_FOUND; // can't ask for another facility
+    return session.facilityId;                                            // always their own
+  }
+  // SUPER_ADMIN: must name the facility (F5 reuses these endpoints)
+}
+```
+
+Every admin endpoint starts with `resolveFacility()` or `managedLearner()`. `mock/facility.test.ts` proves that Pinecrest's admin gets **404** for Harbor Light's learners — the scope document's acceptance check "Facility Admin cannot access another facility's records".
+
+**Design points worth explaining in an interview:**
+
+| Topic | What we did | Why |
+|---|---|---|
+| One base query for every report | `assignmentRows()` builds one row per assignment; the summary, assignments list and progress report all derive from it | Numbers on different pages can't disagree |
+| Idempotent bulk assign | Assigning modules × learners skips pairs that already exist and reports "created / skipped" | Safe to click twice; no duplicate assignments |
+| Guard-rails in the backend | Only ACTIVE modules, only own-facility learners, never deactivated learners | The UI hides these too, but the server is the authority |
+| Soft delete | "Deactivate" sets a status; history is kept and can be reactivated | Training records are evidence — never destroy them by accident |
+| Invites | New learner = INVITED + 7-day single-use link; resending replaces the old link; changing an invited learner's email re-sends | A typo'd or leaked invite can't be used |
+| "Needs attention" | Pending invites, learners locked out, learners who failed a check | Turns data into actions for a busy manager |
+
+> 💡 **Beginner tip — 404 vs 403 again:** when Pinecrest's admin opens `/facility/learners/<Harbor learner id>`, the page says "Learner not found" — exactly what it says for an id that doesn't exist. They can't even learn that the id is real.
+
 ### 5.7 Edge cases
 
 | Situation | Handling |
@@ -535,6 +578,9 @@ A: The browser never receives the answer key — the server strips `isCorrect` b
 
 **Q: How did you design the data for the learner dashboard?**
 A: One "view model" call, `listMyTraining()`, returns each assigned module with its status, progress, attempts and next step already worked out. That avoids the N+1 problem of fetching module, progress, attempts and answers separately for every card, and keeps the status rules in one place on the server (Backend-for-Frontend pattern).
+
+**Q: How did you build the facility reports?**
+A: Everything starts from one base query that turns each assignment into a row with status, progress, best score and attempts — computed with the same rules the learner sees. The dashboard summary, the assignments list and the progress report all derive from those rows, so their numbers always agree. Every admin endpoint first resolves the facility from the session, so a Facility Admin can only ever see their own facility, and a Super Admin must name one explicitly.
 
 **Q: What are the security considerations?**
 A: Hashed passwords, HTTPS, server-side RBAC and tenant scoping, input validation, signed video URLs, and a strict no-patient-data policy.
@@ -644,6 +690,15 @@ Each entry follows the **ADR** (Architecture Decision Record) format — a real 
 | 41 | 2026-11-19 | LLD | Player saves go through a promise queue; "video finished" fires only after it's saved | Fixes a race that could lose the finish and lock the check | Skip a save if one is running |
 | 42 | 2026-11-19 | LLD | "Start" goes to the intro page first; other steps jump straight to the player/check | Learners see objectives before starting; returning learners skip a click | Always go to intro |
 | 43 | 2026-11-19 | LLD | Signed-in layout wrapped in `<Suspense>` | The guard reads the URL, which isn't known when prerendering dynamic routes | Make every route fully dynamic |
+| 44 | 2026-11-19 | LLD | `resolveFacility()`: Facility Admin → own facility only; Super Admin → must name one | One tenant rule for every admin endpoint, reusable by F5 | Separate endpoints per role |
+| 45 | 2026-11-19 | LLD | One `assignmentRows()` base query feeds summary, list and progress report | Consistent numbers everywhere | Separate queries per page |
+| 46 | 2026-11-19 | LLD | Bulk assign is idempotent and returns created/skipped counts | Safe retries and double-clicks; clear feedback | Error on duplicates |
+| 47 | 2026-11-19 | LLD | Only ACTIVE modules and non-deactivated, own-facility learners can be assigned | Scope doc §6.4 (no accidental draft assignment) + tenant rule | Trust the form |
+| 48 | 2026-11-19 | LLD | Deactivate = soft delete (status), history kept, reactivation possible | Training records must not be lost | Hard delete |
+| 49 | 2026-11-19 | LLD | Learner emails unique platform-wide; admins can change them; an invited learner's email change re-sends the invite | Email is the sign-in identity | Per-facility uniqueness |
+| 50 | 2026-11-19 | LLD | Invite links last 7 days (resets: 60 min) and resending replaces the old link | Invites may sit in an inbox for days; resets are more sensitive | Same expiry for both |
+| 51 | 2026-11-19 | LLD | "Needs attention" list: invite pending, locked out, failed check | Makes the dashboard actionable | Numbers only |
+| 52 | 2026-11-19 | LLD | No "unassign" in Phase 1 | Not in the scope document; removing records needs rules about progress already made | Allow unassign |
 
 ---
 
@@ -663,3 +718,5 @@ Each entry follows the **ADR** (Architecture Decision Record) format — a real 
 | 2026-11-19 | "Skip if busy" is a dangerous optimisation: dropping a save looked harmless until the dropped one was the important one. Prefer queuing over skipping when every write matters. |
 | 2026-11-19 | The dev server passed but the production build failed (URL hooks outside `<Suspense>` on dynamic routes). Always run the production build before calling a phase done. |
 | 2026-11-19 | Backend rules are easiest to test without the UI: `mock/learner.test.ts` checks "answer key never sent", attempt limits and completion in milliseconds. The same tests become the contract for the real API. |
+| 2026-11-19 | A hidden screen-reader label (`sr-only`, absolutely positioned) escaped a scrolling table and made the whole page scroll sideways on phones. Fix: `position: relative` on the scroll container. Check layouts at phone width on every phase. |
+| 2026-11-19 | Test tooling can mislead: a browser script that timed out kept running in the page and produced a confusing "paused at 29.6 s" reading. Before calling something a bug, reproduce it cleanly — here a clean rerun showed the player was correct. |
