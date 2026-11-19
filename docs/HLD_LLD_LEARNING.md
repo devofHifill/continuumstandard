@@ -3,7 +3,7 @@
 > A beginner-friendly study guide and interview-prep notebook.
 > It teaches High-Level Design (HLD) and Low-Level Design (LLD) using a real project, and it is a **living document**: every real design decision made while building gets recorded in the [Design Decision Journal](#9-design-decision-journal-living-record).
 
-**Project status:** F0 (foundation + mock data layer) built; F1 (video engine) next (2026-11-19).
+**Project status:** F0 (foundation + mock data layer) and F1 (video engine proof of concept) built; F2 (app shell & auth screens) next (2026-11-19).
 Sections marked **📐 Planned** describe the intended design; they become **🛠 Built** once implemented.
 
 ---
@@ -285,6 +285,48 @@ A **state machine** is a way to describe something that can be in exactly one "s
 | **FEEDBACK** | Show approved rationale; "Continue" → PLAYING. |
 | **On page reload** | Load saved progress, resume from `last_position_sec`, skip answered checkpoints. |
 
+**🛠 Built (F1)** — the video part of this machine (everything up to "video ended") is in `web/src/lib/player/engine.ts`. ASSESSMENT/COMPLETE arrive in F3.
+
+**The real states in code:**
+
+```
+            PLAY                     time ≥ next unanswered checkpoint
+  ready ─────────▶ playing ─────────────────────────────────▶ checkpoint
+    ▲   PAUSE ◀──▶ paused                                       │ SELECT + SUBMIT
+    │                │                                          ▼
+    │                │ (video ends)                        submitting
+    │                ▼                          SUBMIT_FAIL ↙        ↘ SUBMIT_OK
+  (reload)         ended ──PLAY──▶ playing   back to checkpoint     feedback
+                                                                       │ CONTINUE
+                                                                       ▼
+                                                                    playing
+```
+
+**How the code is split (a key LLD idea — *separation of concerns*):**
+
+| Piece | File | Job |
+|---|---|---|
+| **Rules** (pure functions) | `lib/player/engine.ts` | `reducer` (legal transitions), `dueCheckpoint`, `maxSeekable`, `clampSeek`, `advanceFurthest`. No React, no `<video>` — so they're unit-tested (`engine.test.ts`, 17 tests). |
+| **Video loading** (adapter) | `lib/player/videoSource.ts` | Native HLS, hls.js or plain MP4 — the only file that knows about the video provider. Retries on network drops. |
+| **Wiring** (React) | `components/player/ScenarioPlayer.tsx` | Connects the rules to a real `<video>`: frame loop, seek guard, saving, keyboard. |
+| **UI pieces** | `CheckpointPanel.tsx`, `Timeline.tsx` | Question/feedback panel; progress bar with decision-point markers. |
+
+> 💡 **Beginner tip — why a reducer?** A reducer is a function `(state, event) → newState`. Every change goes through it, and illegal events are simply ignored (e.g. `PLAY` while a question is open returns the same state). That makes "the learner can't skip the question" a rule you can test in one line instead of a bug you hope you don't have.
+
+**Precision — how it pauses *exactly* at 00:30:**
+- The `<video>` element's `timeupdate` event only fires ~4 times a second, so on its own the pause could land up to 0.25 s late.
+- While playing, a `requestAnimationFrame` loop checks the time **every frame** (~60×/s). When a decision point is due it pauses and sets `currentTime` to the exact timestamp. Measured in testing: **30.000 s**.
+- **Safety net:** browsers stop animation frames in background tabs but keep playing video, so `timeupdate` also runs the same check. Without it, a learner in another tab could play straight past a question.
+
+**Seeking (decision D4):**
+- `maxSeekable = min(furthest watched, next unanswered checkpoint)`.
+- Our progress bar clamps to it, *and* a `seeking` listener snaps back seeks from anywhere else (keyboard, media keys, dev tools). Defence in depth.
+- The server side (mock today) only lets `furthestSec` go **up**, never down.
+
+**Saving:** every 5 s while playing, on pause, at each decision point, on video end, and when the page is hidden. Answers are saved **before** feedback shows; if the save fails, the learner stays on the question with their answer still selected and a "Try again" button.
+
+**Edge cases handled:** refresh while a question is open (it reappears immediately), answered questions aren't asked again on replay, the first answer wins if a checkpoint is answered twice (e.g. two tabs), free seeking once the video has been watched to the end, and the question panel moves below the video on phones.
+
 ### 5.5 Sequence diagram — submitting a checkpoint answer
 
 A **sequence diagram** shows *who calls whom, in what order*.
@@ -382,7 +424,10 @@ A: Every facility-owned row has a `facility_id`, directly or through its parent.
 A: Small team, tight timeline, ~5k users. Microservices add network calls, distributed failures, and deployment overhead with no benefit at this scale. We kept clear module boundaries so we could split later if needed.
 
 **Q: How does the video pause exactly at the right moment?**
-A: The player listens to the video's time updates in the browser and compares against the next unanswered checkpoint timestamp. Doing it client-side avoids network delay. Answers are saved to the API before feedback is shown, so progress survives a refresh.
+A: It's done in the browser, not the server, to avoid network delay. While playing, a `requestAnimationFrame` loop compares the current time with the next unanswered checkpoint every frame; when it's due, the player pauses and snaps to the exact timestamp. Because animation frames stop in background tabs, the video's `timeupdate` event runs the same check as a safety net. The rules themselves are a pure, unit-tested state machine, separate from the React component. Answers are saved before feedback is shown, so progress survives a refresh.
+
+**Q: How did you test the video engine?**
+A: The rules are pure functions, so they have unit tests (Vitest) for every transition and the seeking maths. Then I ran the scope document's §7.1 acceptance test in a real browser: pause landed at 30.000 s, play and seek were blocked during the question, a simulated network failure kept the answer and offered a retry, refresh resumed at the saved position, and both the native-HLS and hls.js code paths played.
 
 **Q: What if the learner refreshes the page mid-video?**
 A: We store `last_position_sec`, `furthest_sec`, and each checkpoint response. On reload we resume from the last position and skip answered checkpoints.
@@ -473,6 +518,15 @@ Each entry follows the **ADR** (Architecture Decision Record) format — a real 
 | 13 | 2026-11-19 | LLD | Login returns the same error for "unknown email" and "wrong password" | Prevents *user enumeration* — attackers can't discover which emails have accounts | Separate messages |
 | 14 | 2026-11-19 | LLD | Added `Lead` and `ActivityEvent` types beyond the §8 model | Needed for demo-request capture (D9) and Super Admin activity (F5.8) | Leave out until backend |
 | 15 | 2026-11-19 | LLD | Demo tools (quick sign-in, account switcher, reset) behind `NEXT_PUBLIC_DEMO_TOOLS` flag | Fast client demos, but can be switched off for any real deployment | Separate demo build |
+| 16 | 2026-11-19 | LLD | Player rules as a pure reducer + helper functions, separate from the React component | Rules can be unit-tested and explained without a browser | Logic inside the component |
+| 17 | 2026-11-19 | LLD | `requestAnimationFrame` for frame-accurate pausing, with `timeupdate` as a background-tab fallback | `timeupdate` alone is ~250 ms late; rAF alone stops in hidden tabs | `timeupdate` only |
+| 18 | 2026-11-19 | LLD | Video adapter keeps "one source per element"; stale detaches are no-ops | React runs effects twice in development, and an old cleanup was wiping the new source | Ignore (works in production only) |
+| 19 | 2026-11-19 | LLD | Checkpoint answers are idempotent — first answer per (learner, checkpoint) wins | Two tabs or a retried request can't create conflicting answers | Last answer wins |
+| 20 | 2026-11-19 | LLD | Server only lets `furthestSec` increase | A buggy or tampered client can't "un-watch" or fake progress backwards | Trust the client value |
+| 21 | 2026-11-19 | LLD | Answered decision points aren't asked again; seeking is free once the video is finished | Repeat visits shouldn't block review (D7 territory) | Re-ask every visit |
+| 22 | 2026-11-19 | LLD | Watching the video doesn't complete the module — status stays In Progress until the knowledge check (F3) | Completion should mean video **and** assessment | Complete on video end |
+| 23 | 2026-11-19 | LLD | On phones the question panel sits below the video instead of over it | A 16:9 video on a 375 px screen is ~200 px tall — too small for four options | Overlay everywhere |
+| 24 | 2026-11-19 | LLD | Vitest for unit tests | Fast, TypeScript-native, no extra build config | Jest |
 
 ---
 
@@ -484,3 +538,6 @@ Each entry follows the **ADR** (Architecture Decision Record) format — a real 
 | 2026-11-19 | Hiding UI isn't security — tenant isolation must be enforced on the server. Frontend checks are for user experience only. |
 | 2026-11-19 | Frameworks change fast: Next.js 16 ships its own docs inside `node_modules/next/dist/docs/`. Reading the docs for the installed version beats relying on memory. |
 | 2026-11-19 | Server rendering can't see browser storage. Reading `localStorage` during the first render causes hydration mismatches, so browser-only data is read after hydration. |
+| 2026-11-19 | React's development mode runs effects twice on purpose. It exposed a real race in the video adapter (an old cleanup removing the new source) — a bug that would also have hit fast navigation in production. |
+| 2026-11-19 | Measure, don't assume: the sample video was 634.6 s, not the 596 s in the seed. Server-side clamping used the wrong value until it was measured. Bumping the mock DB version cleared the stale stored copy. |
+| 2026-11-19 | Testing in a hidden browser tab revealed that animation frames pause there — which led to the `timeupdate` safety net. Real-world conditions find bugs unit tests don't. |

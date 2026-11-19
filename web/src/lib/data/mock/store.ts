@@ -76,6 +76,16 @@ export function resetStore() {
   setStoredSession(null);
 }
 
+/** Demo-only "network failure" switch (in memory, resets on reload). */
+let networkFailure = false;
+export function getNetworkFailure() {
+  return networkFailure;
+}
+export function setNetworkFailure(on: boolean) {
+  networkFailure = on;
+  notify();
+}
+
 export function subscribe(listener: () => void) {
   listeners.add(listener);
   // Keep tabs in sync: a change in another tab fires a storage event here.

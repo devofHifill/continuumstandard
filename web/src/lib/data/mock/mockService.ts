@@ -1,7 +1,15 @@
-import type { ID, Session, User } from "@/lib/types";
-import { ServiceError, type DataService } from "../service";
+import type { ID, LearnerProgress, Session, User } from "@/lib/types";
+import { ServiceError, type DataService, type ProgressUpdate } from "../service";
 import { DEMO_PASSWORD } from "./seed";
-import { getDb, getStoredSession, resetStore, setStoredSession, subscribe } from "./store";
+import {
+  getDb,
+  getNetworkFailure,
+  getStoredSession,
+  resetStore,
+  setStoredSession,
+  subscribe,
+  updateDb,
+} from "./store";
 
 /** Small artificial delay so loading states are visible, like a real network. */
 const LATENCY_MS = 150;
@@ -26,6 +34,38 @@ function inScope(session: Session, facilityId: ID | null): boolean {
 /** Out-of-scope records look exactly like missing ones: 404, not 403. */
 function notFound(what: string): never {
   throw new ServiceError("NOT_FOUND", `${what} not found.`);
+}
+
+/**
+ * A learner may only play, answer or save progress for modules assigned to them.
+ * Not assigned → NOT_FOUND (same as a module that doesn't exist).
+ */
+function assertAssigned(session: Session, moduleId: ID) {
+  const assigned = getDb().assignments.some((a) => a.userId === session.userId && a.moduleId === moduleId);
+  if (session.role !== "LEARNER" || !assigned) notFound("Module");
+}
+
+function emptyProgress(userId: ID, moduleId: ID): LearnerProgress {
+  return {
+    userId,
+    moduleId,
+    status: "NOT_STARTED",
+    lastPositionSec: 0,
+    furthestSec: 0,
+    videoCompleted: false,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+let idCounter = 0;
+function newId(prefix: string) {
+  idCounter += 1;
+  return `${prefix}-${Date.now().toString(36)}-${idCounter}`;
+}
+
+/** Demo switch to test offline behaviour: when on, writes fail like a dropped connection. */
+function simulateNetwork() {
+  if (getNetworkFailure()) throw new ServiceError("NETWORK", "Can't reach the server. Check your connection.");
 }
 
 function toSession(user: User): Session {
@@ -144,6 +184,99 @@ export class MockDataService implements DataService {
         (!filter.moduleId || p.moduleId === filter.moduleId),
     );
     return delay(clone(rows));
+  }
+
+  // ── Scenario player (F1) ────────────────────────────────
+  async getPlayback(moduleId: ID) {
+    const s = requireSession();
+    const db = getDb();
+    assertAssigned(s, moduleId);
+    const trainingModule = db.modules.find((m) => m.id === moduleId);
+    const video = db.videos.find((v) => v.moduleId === moduleId);
+    if (!trainingModule || !video) notFound("Module");
+    const checkpoints = db.checkpoints
+      .filter((c) => c.videoId === video.id)
+      .sort((a, b) => a.timestampSec - b.timestampSec);
+    const ids = new Set(checkpoints.map((c) => c.id));
+    const responses = db.checkpointResponses.filter((r) => r.userId === s.userId && ids.has(r.checkpointId));
+    const progress =
+      db.progress.find((p) => p.userId === s.userId && p.moduleId === moduleId) ?? emptyProgress(s.userId, moduleId);
+    return delay(clone({ module: trainingModule, video, checkpoints, responses, progress }));
+  }
+
+  async submitCheckpointResponse(checkpointId: ID, optionId: ID) {
+    const s = requireSession();
+    simulateNetwork();
+    const db = getDb();
+    const checkpoint = db.checkpoints.find((c) => c.id === checkpointId);
+    const video = checkpoint && db.videos.find((v) => v.id === checkpoint.videoId);
+    if (!checkpoint || !video) notFound("Checkpoint");
+    assertAssigned(s, video.moduleId);
+    const option = checkpoint.options.find((o) => o.id === optionId);
+    if (!option) throw new ServiceError("VALIDATION", "That answer option doesn't belong to this question.");
+
+    // Idempotent: one answer per (learner, checkpoint) — the first one wins.
+    const existing = db.checkpointResponses.find((r) => r.userId === s.userId && r.checkpointId === checkpointId);
+    if (existing) {
+      const firstOption = checkpoint.options.find((o) => o.id === existing.optionId) ?? option;
+      return delay(
+        clone({ response: existing, option: firstOption, generalRationale: checkpoint.generalRationale, alreadyAnswered: true }),
+      );
+    }
+
+    const response = {
+      id: newId("cr"),
+      userId: s.userId,
+      checkpointId,
+      optionId,
+      answeredAt: new Date().toISOString(),
+    };
+    updateDb((d) => {
+      d.checkpointResponses.push(response);
+    });
+    return delay(clone({ response, option, generalRationale: checkpoint.generalRationale, alreadyAnswered: false }));
+  }
+
+  async saveProgress(moduleId: ID, update: ProgressUpdate) {
+    const s = requireSession();
+    simulateNetwork();
+    assertAssigned(s, moduleId);
+    const db = getDb();
+    const duration = db.videos.find((v) => v.moduleId === moduleId)?.durationSec ?? Infinity;
+    const clamp = (n: number) => Math.max(0, Math.min(Number.isFinite(n) ? n : 0, duration));
+
+    let saved!: LearnerProgress;
+    let started = false;
+    updateDb((d) => {
+      let p = d.progress.find((x) => x.userId === s.userId && x.moduleId === moduleId);
+      if (!p) {
+        p = emptyProgress(s.userId, moduleId);
+        d.progress.push(p);
+      }
+      if (p.status === "NOT_STARTED") {
+        p.status = "IN_PROGRESS";
+        started = true;
+      }
+      p.lastPositionSec = clamp(update.positionSec);
+      // The server never lets the furthest point move backwards.
+      p.furthestSec = Math.max(p.furthestSec, clamp(update.furthestSec));
+      if (update.videoCompleted) p.videoCompleted = true;
+      p.updatedAt = new Date().toISOString();
+      saved = p;
+      if (started) {
+        const user = d.users.find((u) => u.id === s.userId);
+        const trainingModule = d.modules.find((m) => m.id === moduleId);
+        d.activity.push({
+          id: newId("act"),
+          type: "MODULE_STARTED",
+          actorId: s.userId,
+          facilityId: s.facilityId,
+          message: `${user?.name ?? "A learner"} started ${trainingModule?.title ?? "a module"}`,
+          createdAt: p.updatedAt,
+        });
+      }
+    });
+    return delay(clone(saved));
   }
 
   // ── Demo tooling ────────────────────────────────────────

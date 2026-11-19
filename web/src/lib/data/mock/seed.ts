@@ -43,11 +43,11 @@ export interface MockDb {
   activity: ActivityEvent[];
 }
 
-export const MOCK_DB_VERSION = 1;
+export const MOCK_DB_VERSION = 2;
 
 /** Public test stream (Big Buck Bunny, ~10 min) used until the client's videos are hosted. */
 const SAMPLE_HLS = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8";
-const SAMPLE_DURATION = 596;
+const SAMPLE_DURATION = 635; // measured: 634.6 s
 
 const PLACEHOLDER_RATIONALE =
   "Placeholder rationale. The approved explanation for this decision point will be supplied by The Continuum-Standard.";

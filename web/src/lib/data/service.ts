@@ -1,6 +1,10 @@
 import type {
+  CheckpointOption,
+  CheckpointResponse,
+  DecisionCheckpoint,
   Facility,
   ID,
+  ScenarioVideo,
   LearnerProgress,
   Session,
   TrainingAssignment,
@@ -48,6 +52,20 @@ export interface DataService {
   listAssignments(filter?: { userId?: ID; moduleId?: ID }): Promise<TrainingAssignment[]>;
   listProgress(filter?: { userId?: ID; moduleId?: ID }): Promise<LearnerProgress[]>;
 
+  // ── Scenario player (F1) ────────────────────────────────
+  /**
+   * Everything the player needs to start or resume a module for the signed-in learner.
+   * Allowed only when the learner is assigned to the module.
+   */
+  getPlayback(moduleId: ID): Promise<PlaybackBundle>;
+  /**
+   * Save the learner's answer at a decision point and return the approved feedback.
+   * Idempotent per (learner, checkpoint): if already answered, the first answer is kept and returned.
+   */
+  submitCheckpointResponse(checkpointId: ID, optionId: ID): Promise<CheckpointResult>;
+  /** Save playback position. `furthestSec` only ever increases on the server side. */
+  saveProgress(moduleId: ID, update: ProgressUpdate): Promise<LearnerProgress>;
+
   // ── Demo tooling ────────────────────────────────────────
   /** Restore the seed data and sign out. Mock only; the real API won't have this. */
   resetDemoData(): Promise<void>;
@@ -55,7 +73,32 @@ export interface DataService {
   subscribe(listener: () => void): () => void;
 }
 
-export type ServiceErrorCode = "UNAUTHENTICATED" | "FORBIDDEN" | "NOT_FOUND" | "VALIDATION";
+export interface PlaybackBundle {
+  module: TrainingModule;
+  video: ScenarioVideo;
+  /** Sorted by timestamp. */
+  checkpoints: DecisionCheckpoint[];
+  /** The learner's existing answers for this module's checkpoints. */
+  responses: CheckpointResponse[];
+  progress: LearnerProgress;
+}
+
+export interface CheckpointResult {
+  response: CheckpointResponse;
+  /** The option the learner chose (with its optional rationale). */
+  option: CheckpointOption;
+  generalRationale?: string;
+  /** true if this checkpoint had already been answered (first answer kept). */
+  alreadyAnswered: boolean;
+}
+
+export interface ProgressUpdate {
+  positionSec: number;
+  furthestSec: number;
+  videoCompleted?: boolean;
+}
+
+export type ServiceErrorCode = "UNAUTHENTICATED" | "FORBIDDEN" | "NOT_FOUND" | "VALIDATION" | "NETWORK";
 
 export class ServiceError extends Error {
   constructor(

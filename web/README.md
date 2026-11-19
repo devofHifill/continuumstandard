@@ -9,7 +9,9 @@ npm install
 npm run dev        # http://localhost:3000
 ```
 
-Other scripts: `npm run build`, `npm run lint`.
+Other scripts: `npm run build`, `npm run lint`, `npm test` (Vitest unit tests).
+
+Video engine proof of concept: sign in as Jordan Lee or Alex Rivera and open `/poc`.
 
 ## Demo mode
 
@@ -26,7 +28,7 @@ The shared demo password is defined in `seed.ts` (mock only).
 
 ```
 src/
-  app/                  routes (login, dashboard, …)
+  app/                  routes (login, dashboard, poc, …)
   components/ui/        base components: Button, Field, Card, Badge, Table, Modal
   components/           app-level components (DemoToolbar)
   lib/types.ts          domain types — mirror the data model (scope doc §8)
@@ -35,6 +37,8 @@ src/
   lib/data/index.ts     picks the implementation (swap to the real API here)
   lib/data/hooks.ts     useSession, useQuery, useHydrated
   lib/auth/roles.ts     role labels and post-login routing
+  lib/player/           video engine: pure rules (engine.ts, unit-tested) + provider adapter
+  components/player/    ScenarioPlayer, CheckpointPanel, Timeline
 ```
 
 **Rule:** pages talk only to `data` from `@/lib/data`, never to the mock files directly
