@@ -3,7 +3,7 @@
 > A beginner-friendly study guide and interview-prep notebook.
 > It teaches High-Level Design (HLD) and Low-Level Design (LLD) using a real project, and it is a **living document**: every real design decision made while building gets recorded in the [Design Decision Journal](#9-design-decision-journal-living-record).
 
-**Project status:** F0 (foundation + mock data layer) and F1 (video engine proof of concept) built; F2 (app shell & auth screens) next (2026-11-19).
+**Project status:** F0 (foundation), F1 (video engine POC) and F2 (app shell, roles, sign-in & password flows) built; F3 (learner experience) next (2026-11-19).
 Sections marked **📐 Planned** describe the intended design; they become **🛠 Built** once implemented.
 
 ---
@@ -374,6 +374,57 @@ This is the **Adapter / Repository pattern**: the UI depends on an *interface*, 
 
 > 💡 **Beginner tip — hydration:** Next.js renders the page on the server first, then React "hydrates" it in the browser. The server can't read `localStorage`, so anything stored there (the session, demo accounts) is only read *after* hydration — otherwise the server HTML and browser HTML differ and React throws a *hydration mismatch* error. That's what `useHydrated()` and the server snapshot in `useSession()` handle.
 
+### 5.8 Authentication, roles and routing
+
+**🛠 Built (F2)** — in the frontend with a mock backend. The *rules* are real; the *security* must be re-done on the server.
+
+**Routes by role (decision D1):**
+
+```
+/login  /forgot-password  /reset-password?token=…  /set-password?token=…   ← public
+/admin/…      Super Admin    (Dashboard, Facilities, Facility Admins, Training Content, Activity, Demo Requests)
+/facility/…   Facility Admin (Dashboard, Learners, Assignments, Learner Progress)
+/learn/…      Learner        (Dashboard, Assigned Training, My Progress)
+/profile      any signed-in role
+```
+
+One function decides access: `canAccess(role, path)` in `lib/auth/roles.ts`. The navigation menu, the route guard and the post-login redirect all use it, so they can't disagree. (*Single source of truth* — a classic LLD principle.)
+
+**The route guard (`AuthGate`) — what happens on every signed-in page:**
+
+| Situation | Result |
+|---|---|
+| Not signed in | → `/login?next=/the/page` and back there after signing in |
+| Wrong role for the URL (learner opens `/admin`) | → their own home |
+| Account deactivated / facility switched off *while signed in* | Signed out at once (even if it happened in another tab), with an explanation |
+
+**Password flows (sequence for "forgot password"):**
+
+```
+User            Forgot page          API (mock)                   Email
+ │ enters email ─▶│ requestPasswordReset(email)                      │
+ │                │───────────────────▶│ if active: new single-use   │
+ │                │                    │ token, 60-min expiry ──────▶│ link sent
+ │◀ "If that email has an account, we sent a link" (always the same) │
+ │ opens link ────────────────────────▶│ checkAuthToken: unknown / used / expired?
+ │ new password ─────────────────────▶│ completeAuthToken: set password, mark token used, sign in
+```
+
+**Security rules built in (great interview material):**
+
+| Rule | Why |
+|---|---|
+| Same reply for known and unknown emails (login *and* forgot password) | Stops **user enumeration** — attackers can't discover who has an account |
+| Reset/invite links are random, single-use and expire | A leaked or old email can't be reused |
+| `next=` redirects only to in-app paths (`safeNextPath`) | Stops **open redirects** (`/login?next=https://evil.site` phishing trick) |
+| Every request re-checks the account is still active | Deactivation takes effect immediately, not at next login |
+| Password rules shared by form and backend (`validatePassword`) | Instant feedback in the UI, real enforcement on the server |
+| Mock stores passwords in plain text — **mock only** | A real backend stores a slow, salted hash (Argon2/bcrypt), never the password |
+
+> 💡 **Beginner tip — authentication vs authorization, in code:** `login()` / `completeAuthToken()` are *authentication* (who are you?). `canAccess()` and the mock's `requireSession()` + `inScope()` are *authorization* (what may you do?). Keep them separate.
+
+> 💡 **Beginner tip — a framework surprise:** Next.js 16 keeps recently visited pages mounted but hidden (React `<Activity>`), so their state survives navigation. That broke two things in testing — the login page remembered "loading" from an earlier sign-in, and a used reset link stuck on "Checking…". The fix (`useResetOnHide`) resets one-off flags, and clears password fields, when a page is hidden.
+
 ### 5.7 Edge cases
 
 | Situation | Handling |
@@ -437,6 +488,9 @@ A: Track `furthest_sec`. If they seek beyond it, snap back. While a checkpoint i
 
 **Q: How is the content managed without developers?**
 A: It's data-driven — modules, timestamps, questions and rationales live in the database and are edited through a Super Admin content editor, with draft/active status so incomplete content can't be assigned.
+
+**Q: How does login and password reset work?**
+A: Email + password sign-in, plus emailed single-use links for invites and resets that expire after 60 minutes. The forgot-password page always gives the same answer so it can't be used to discover accounts, `next=` redirects are limited to in-app paths, and every request re-checks the account — so deactivating someone signs them out immediately. Routing uses one `canAccess(role, path)` function shared by the menu, the guard and the redirects. All of it is currently enforced in a mock; the real API must enforce it again server-side, with hashed passwords.
 
 **Q: What are the security considerations?**
 A: Hashed passwords, HTTPS, server-side RBAC and tenant scoping, input validation, signed video URLs, and a strict no-patient-data policy.
@@ -527,6 +581,17 @@ Each entry follows the **ADR** (Architecture Decision Record) format — a real 
 | 22 | 2026-11-19 | LLD | Watching the video doesn't complete the module — status stays In Progress until the knowledge check (F3) | Completion should mean video **and** assessment | Complete on video end |
 | 23 | 2026-11-19 | LLD | On phones the question panel sits below the video instead of over it | A 16:9 video on a 375 px screen is ~200 px tall — too small for four options | Overlay everywhere |
 | 24 | 2026-11-19 | LLD | Vitest for unit tests | Fast, TypeScript-native, no extra build config | Jest |
+| 25 | 2026-11-19 | LLD | Role areas `/admin`, `/facility`, `/learn` + shared `/profile`; one `canAccess()` used by nav, guard and redirects | One rule in one place can't drift out of sync | Per-page role checks |
+| 26 | 2026-11-19 | LLD | Client-side route guard (`AuthGate`) for now | Auth is mocked in the browser; real sessions will be checked on the server (cookies / proxy) | Server guard now (no server yet) |
+| 27 | 2026-11-19 | LLD | Forgot password always shows the same message | Prevents user enumeration | "No account with that email" |
+| 28 | 2026-11-19 | LLD | Single-use, expiring (60 min), random tokens for reset and invite links | Leaked/old links can't be reused | Long-lived links |
+| 29 | 2026-11-19 | LLD | Setting a password from a link signs the user in | The emailed link already proves they own the address — one less step | Make them log in again |
+| 30 | 2026-11-19 | LLD | `next=` accepts in-app paths only, and only if the role may open them | Blocks open-redirect phishing; avoids bouncing to a forbidden page | Trust `next` |
+| 31 | 2026-11-19 | LLD | Account/facility status re-checked on every request and on data changes (incl. other tabs) | Deactivation takes effect immediately (F2.7) | Check only at login |
+| 32 | 2026-11-19 | LLD | Profile: users edit name and job title; email changes go through admins | Email is the login identity and the facility's record | Self-service email change |
+| 33 | 2026-11-19 | LLD | Per-user passwords in the mock + demo one-click sign-in that skips the password | Lets password changes be tested while keeping demos fast | One shared demo password |
+| 34 | 2026-11-19 | LLD | `useResetOnHide` for one-off form state | Next.js 16 keeps hidden pages' state; "loading"/"sent" flags and typed passwords must not survive | Remount pages on every visit |
+| 35 | 2026-11-19 | LLD | Next.js automatic "instant navigation" validation set to opt-in | Client-side guard means signed-in pages can't be prerendered; revisit with server auth | Leave warnings on every page |
 
 ---
 
@@ -541,3 +606,5 @@ Each entry follows the **ADR** (Architecture Decision Record) format — a real 
 | 2026-11-19 | React's development mode runs effects twice on purpose. It exposed a real race in the video adapter (an old cleanup removing the new source) — a bug that would also have hit fast navigation in production. |
 | 2026-11-19 | Measure, don't assume: the sample video was 634.6 s, not the 596 s in the seed. Server-side clamping used the wrong value until it was measured. Bumping the mock DB version cleared the stale stored copy. |
 | 2026-11-19 | Testing in a hidden browser tab revealed that animation frames pause there — which led to the `timeupdate` safety net. Real-world conditions find bugs unit tests don't. |
+| 2026-11-19 | Next.js 16 keeps visited pages alive in the background. Code that assumes "navigating away unmounts the page" breaks: stale `loading` flags blocked a redirect and the video player tried to auto-play on return. Design components to be hidden and shown, not just mounted once. |
+| 2026-11-19 | Two redirects racing (the guard's "signed out → login?next" vs. sign-out's "login?reason") produced the wrong page. A small "we're leaving on purpose" flag fixed it — watch for competing side effects reacting to the same state change. |

@@ -32,6 +32,20 @@ export interface DataService {
   logout(): Promise<void>;
   /** Current session, or null when signed out. Synchronous so the UI can read it on render. */
   getSession(): Session | null;
+  /**
+   * Re-check the session with "the server": signs out and throws UNAUTHENTICATED if the
+   * account was deactivated or the facility switched off since login (F2.7).
+   */
+  refreshSession(): Promise<Session | null>;
+  /** Email a reset link. Always resolves the same way, whether or not the email exists. */
+  requestPasswordReset(email: string): Promise<void>;
+  /** Check an invite/reset link before showing the form. Throws VALIDATION if used, expired or unknown. */
+  checkAuthToken(token: string, purpose: AuthTokenPurpose): Promise<{ name: string; email: string }>;
+  /** Set a password from an invite/reset link, then sign in. */
+  completeAuthToken(token: string, purpose: AuthTokenPurpose, newPassword: string): Promise<Session>;
+  changePassword(currentPassword: string, newPassword: string): Promise<void>;
+  /** Learners and admins may edit their own name and job title; email is managed by admins. */
+  updateMyProfile(update: { name: string; jobTitle?: string }): Promise<User>;
 
   // ── Facilities ──────────────────────────────────────────
   /** Super Admin: all facilities. Facility Admin / Learner: only their own. */
@@ -72,6 +86,9 @@ export interface DataService {
   /** Subscribe to data/session changes (for React's useSyncExternalStore). */
   subscribe(listener: () => void): () => void;
 }
+
+/** INVITE = first password for a new account; RESET = forgotten password. */
+export type AuthTokenPurpose = "INVITE" | "RESET";
 
 export interface PlaybackBundle {
   module: TrainingModule;

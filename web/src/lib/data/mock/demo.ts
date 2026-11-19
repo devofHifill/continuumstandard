@@ -1,8 +1,13 @@
-import type { Role } from "@/lib/types";
-import { DEMO_PASSWORD } from "./seed";
+import type { Role, Session } from "@/lib/types";
+import { ServiceError } from "../service";
+import { findByEmail, startSession } from "./mockService";
+import type { OutboxEmail } from "./seed";
 import { getDb } from "./store";
 
-/** Demo tools (quick sign-in, role switcher, reset) — on unless explicitly turned off. */
+/**
+ * Demo-only helpers (mock mode). Nothing here exists in the real API.
+ * Turn every demo tool off with NEXT_PUBLIC_DEMO_TOOLS=false.
+ */
 export const DEMO_TOOLS_ENABLED = process.env.NEXT_PUBLIC_DEMO_TOOLS !== "false";
 
 export interface DemoAccount {
@@ -26,7 +31,21 @@ export function listDemoAccounts(): DemoAccount[] {
   }));
 }
 
-export const demoPassword = DEMO_PASSWORD;
+/**
+ * One-click sign-in for demos. Skips the password (so it still works after someone
+ * changes theirs) but applies the same account rules as a normal login.
+ */
+export async function demoSignIn(email: string): Promise<Session> {
+  const user = findByEmail(email);
+  if (!user) throw new ServiceError("NOT_FOUND", "No such demo account.");
+  return startSession(user);
+}
+
+/** The newest email the mock "sent" to an address — stands in for checking an inbox. */
+export function latestEmailTo(email: string): OutboxEmail | undefined {
+  const e = email.trim().toLowerCase();
+  return [...getDb().outbox].reverse().find((m) => m.to.toLowerCase() === e);
+}
 
 /** Make mock writes fail, to test how the UI handles a dropped connection. */
 export { getNetworkFailure, setNetworkFailure } from "./store";
