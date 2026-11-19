@@ -13,7 +13,7 @@ Created: 2026-11-19 · Approach: frontend-first, backed by a mock data layer
 |---|---|---|---|---|
 | F0 | Setup, design tokens, mock data layer, seed, mock login | Foundation | ✅ | 7 / 7 |
 | F1 | Scenario video engine POC | Gate 2 / §7.1 | 🟨 | 8 / 9 |
-| F2 | App shell & auth screens | Auth & RBAC (UI) | ⬜ | 0 / 7 |
+| F2 | App shell & auth screens | Auth & RBAC (UI) | ✅ | 7 / 7 |
 | F3 | Learner experience | Learner half of MVP test | ⬜ | 0 / 8 |
 | F4 | Facility Admin | Admin half of MVP test | ⬜ | 0 / 7 |
 | F5 | Super Admin & content editor | Data-driven content | ⬜ | 0 / 9 |
@@ -72,13 +72,13 @@ Created: 2026-11-19 · Approach: frontend-first, backed by a mock data layer
 ### F2 — App shell & auth screens
 | ID | Task | Status | Notes |
 |---|---|---|---|
-| F2.1 | Login page | ⬜ | |
-| F2.2 | Forgot password + reset password pages | ⬜ | |
-| F2.3 | Set password page (invite link) | ⬜ | D8 |
-| F2.4 | Logout + Profile page | ⬜ | |
-| F2.5 | App layout with per-role navigation | ⬜ | D1 |
-| F2.6 | Route guards by role; facility-scoped data access in mock layer | ⬜ | UI-only; real enforcement is backend |
-| F2.7 | Deactivated-account handling | ⬜ | |
+| F2.1 | Login page | ✅ | `next=` return, sign-out/ended messages, show-password toggle |
+| F2.2 | Forgot password + reset password pages | ✅ | Same reply for any email; single-use 60-min links; demo inbox shows the link |
+| F2.3 | Set password page (invite link) | ✅ | D8. Seeded invite for Chris Park; activates account and signs in |
+| F2.4 | Logout + Profile page | ✅ | Edit name/job title, change password, sign out (user menu + profile) |
+| F2.5 | App layout with per-role navigation | ✅ | D1. Sidebar on desktop, slide-in menu on phones; placeholder pages for every sitemap section |
+| F2.6 | Route guards by role; facility-scoped data access in mock layer | ✅ | `AuthGate` + `canAccess()`. UI-only; real enforcement is backend |
+| F2.7 | Deactivated-account handling | ✅ | Re-checked on every request/navigation and across tabs; signed out with explanation |
 
 ### F3 — Learner
 | ID | Task | Status | Notes |
@@ -181,5 +181,6 @@ Created: 2026-11-19 · Approach: frontend-first, backed by a mock data layer
 | Date | Change |
 |---|---|
 | 2026-11-19 | Plan created; defaults D1–D14 agreed |
+| 2026-11-19 | F2 complete: role areas `/admin`, `/facility`, `/learn` + `/profile`; route guard; login/forgot/reset/set-password; profile. Temporary `/dashboard` removed (its scoped-data preview now sits on each role dashboard). Mock DB version 3 (per-user passwords, auth tokens, demo outbox). Next.js instant-navigation validation set to opt-in |
 | 2026-11-19 | F1 built (8/9): scenario player, pure engine with 17 unit tests, provider adapter, `/poc` page with §7.1 checklist and demo debug panel. Cross-browser testing (F1.9) still open. Mock DB version bumped to 2 (sample video duration corrected to 635 s) |
 | 2026-11-19 | F0 complete: Next.js app in `web/`, mock data layer, seed data, demo login/toolbar. Temporary `/dashboard` preview shows scoped data per account. Added `Lead` and `ActivityEvent` types (not in §8) for D9 and F5.8 |

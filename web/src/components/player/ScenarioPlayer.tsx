@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import { useCallback, useEffect, useReducer, useRef, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState, type KeyboardEvent } from "react";
 import { data, ServiceError, type PlaybackBundle } from "@/lib/data";
 import {
   advanceFurthest,
@@ -69,11 +69,18 @@ export function ScenarioPlayer({ bundle, onEnded, onDebug }: Props) {
   // which must read the latest values without re-subscribing every render.
   const stateRef = useRef(state);
   const furthestRef = useRef(progress.furthestSec);
+  /** Latest known position. Survives Next.js hiding/restoring the page (see below). */
+  const positionRef = useRef(progress.lastPositionSec);
   const savingRef = useRef(false);
   const videoCompletedRef = useRef(progress.videoCompleted);
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
+
+  // Next.js keeps visited pages mounted but hidden (React <Activity>). Hiding runs effect
+  // cleanups (which detach the video) but keeps state — so pause on hide, or the player
+  // would try to auto-play when the learner comes back.
+  useLayoutEffect(() => () => dispatch({ type: "PAUSE" }), []);
 
   const seekLimit = maxSeekable(checkpoints, state.answered, furthest);
   const locked = state.phase === "checkpoint" || state.phase === "submitting" || state.phase === "feedback";
@@ -91,7 +98,7 @@ export function ScenarioPlayer({ bundle, onEnded, onDebug }: Props) {
       setSaveStatus("saving");
       try {
         await data.saveProgress(module.id, {
-          positionSec: el.currentTime,
+          positionSec: (positionRef.current = el.currentTime),
           furthestSec: furthestRef.current,
           videoCompleted: extra.videoCompleted || videoCompletedRef.current,
         });
@@ -122,7 +129,7 @@ export function ScenarioPlayer({ bundle, onEnded, onDebug }: Props) {
       if (Number.isFinite(el.duration) && el.duration > 0) setDuration(el.duration);
       const answered = stateRef.current.answered;
       // Resume where they left off — or from the start if they'd finished the video.
-      let resumeAt = clampSeek(progress.lastPositionSec, maxSeekable(checkpoints, answered, furthestRef.current));
+      let resumeAt = clampSeek(positionRef.current, maxSeekable(checkpoints, answered, furthestRef.current));
       if (progress.videoCompleted && resumeAt >= el.duration - 1) resumeAt = 0;
       el.currentTime = resumeAt;
       setCurrentTime(resumeAt);
@@ -199,6 +206,7 @@ export function ScenarioPlayer({ bundle, onEnded, onDebug }: Props) {
         }
       }
       // Re-render ~4×/second for the clock and bar; the check above runs every frame.
+      positionRef.current = t;
       if (Math.abs(t - lastShown) >= 0.25) {
         lastShown = t;
         setCurrentTime(t);
@@ -295,7 +303,7 @@ export function ScenarioPlayer({ bundle, onEnded, onDebug }: Props) {
     if (!el || locked) return;
     const landed = clampSeek(target, seekLimit);
     if (target > seekLimit + 0.5) flashNotice("You can't skip ahead of what you've watched.");
-    el.currentTime = landed;
+    el.currentTime = positionRef.current = landed;
     setCurrentTime(landed);
   };
 

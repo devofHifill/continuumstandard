@@ -41,9 +41,31 @@ export interface MockDb {
   progress: LearnerProgress[];
   leads: Lead[];
   activity: ActivityEvent[];
+  /** userId → password. MOCK ONLY: a real backend stores a slow salted hash (e.g. Argon2/bcrypt), never the password. */
+  credentials: Record<string, string>;
+  /** Single-use links for invites (set password) and password resets. */
+  authTokens: AuthToken[];
+  /** Emails the mock "sent", so demos can open invite/reset links without a mail server. */
+  outbox: OutboxEmail[];
 }
 
-export const MOCK_DB_VERSION = 2;
+export interface AuthToken {
+  token: string;
+  userId: string;
+  purpose: "INVITE" | "RESET";
+  expiresAt: string;
+  usedAt?: string;
+}
+
+export interface OutboxEmail {
+  id: string;
+  to: string;
+  subject: string;
+  link: string;
+  createdAt: string;
+}
+
+export const MOCK_DB_VERSION = 3;
 
 /** Public test stream (Big Buck Bunny, ~10 min) used until the client's videos are hosted. */
 const SAMPLE_HLS = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8";
@@ -335,5 +357,19 @@ export function createSeed(): MockDb {
     progress,
     leads,
     activity,
+    credentials: Object.fromEntries(users.filter((x) => x.status !== "INVITED").map((x) => [x.id, DEMO_PASSWORD])),
+    authTokens: [
+      // Chris Park was invited but hasn't set a password yet — open /set-password?token=demo-invite-chris
+      { token: "demo-invite-chris", userId: "usr-h-l4", purpose: "INVITE", expiresAt: "2027-12-31T00:00:00Z" },
+    ],
+    outbox: [
+      {
+        id: "mail-1",
+        to: "chris@harborlight.test",
+        subject: "You're invited to The Continuum-Standard",
+        link: "/set-password?token=demo-invite-chris",
+        createdAt: "2026-11-12T14:00:00Z",
+      },
+    ],
   };
 }

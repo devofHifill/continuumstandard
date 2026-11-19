@@ -5,7 +5,8 @@ import { useState } from "react";
 import { Button, Modal } from "@/components/ui";
 import { data } from "@/lib/data";
 import { useHydrated, useSession } from "@/lib/data/hooks";
-import { DEMO_TOOLS_ENABLED, demoPassword, listDemoAccounts } from "@/lib/data/mock/demo";
+import { DEMO_TOOLS_ENABLED, demoSignIn, listDemoAccounts } from "@/lib/data/mock/demo";
+import { endSession } from "@/components/shell/AuthGate";
 import { ROLE_LABEL, roleHome } from "@/lib/auth/roles";
 
 /**
@@ -26,7 +27,7 @@ export function DemoToolbar() {
     if (!email) return;
     setBusy(true);
     try {
-      const s = await data.login(email, demoPassword);
+      const s = await demoSignIn(email);
       router.push(roleHome(s.role));
     } finally {
       setBusy(false);
@@ -35,16 +36,12 @@ export function DemoToolbar() {
 
   async function reset() {
     setBusy(true);
-    await data.resetDemoData();
+    await endSession(router, "signed-out", () => data.resetDemoData());
     setBusy(false);
     setConfirmReset(false);
-    router.push("/login");
   }
 
-  async function signOut() {
-    await data.logout();
-    router.push("/login");
-  }
+  const signOut = () => endSession(router, "signed-out");
 
   return (
     <>

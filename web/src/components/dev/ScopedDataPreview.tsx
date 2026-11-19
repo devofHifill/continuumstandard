@@ -1,34 +1,16 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 import { Badge, Card, CardBody, CardHeader, Table, Td, Th } from "@/components/ui";
 import { data } from "@/lib/data";
-import { useQuery, useSession } from "@/lib/data/hooks";
+import { useQuery } from "@/lib/data/hooks";
 import { ROLE_LABEL } from "@/lib/auth/roles";
 import type { Session } from "@/lib/types";
 
 /**
- * Temporary F0 landing page after sign-in. It shows what the signed-in user is allowed
- * to see, which demonstrates role + facility scoping in the mock data layer.
- * Replaced by real role dashboards in F2–F5.
+ * Demo panel: lists what the signed-in account is allowed to see, to show role +
+ * facility scoping working. Shown on dashboards until real content replaces it.
  */
-export function DashboardPreview() {
-  const session = useSession();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (session === null) router.replace("/login");
-  }, [session, router]);
-
-  if (!session) {
-    return <p className="text-sm text-muted">Loading…</p>;
-  }
-  return <ScopedData session={session} />;
-}
-
-function ScopedData({ session }: { session: Session }) {
+export function ScopedDataPreview({ session }: { session: Session }) {
   const isLearner = session.role === "LEARNER";
   const q = useQuery(`preview:${session.userId}`, async () => {
     const [facilities, users, modules, assignments, progress] = await Promise.all([
@@ -43,18 +25,9 @@ function ScopedData({ session }: { session: Session }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <p className="text-sm text-muted">Signed in as</p>
-        <h1 className="text-2xl font-semibold">{session.name}</h1>
-        <div className="mt-2 flex flex-wrap gap-2">
-          <Badge tone="primary">{ROLE_LABEL[session.role]}</Badge>
-          <Badge>{session.email}</Badge>
-        </div>
-      </div>
-
       <div className="rounded-lg bg-info-soft px-4 py-3 text-sm text-info">
-        F0 preview page. The real {ROLE_LABEL[session.role]} dashboard arrives in a later phase. Below is
-        everything the data layer lets this account see — switch accounts to compare facilities.
+        Demo preview: everything the data layer lets this account see. Switch accounts in the demo toolbar to
+        compare facilities. Real dashboard content arrives in a later phase.
       </div>
 
       {q.status === "loading" && <p className="text-sm text-muted">Loading data…</p>}
@@ -159,11 +132,6 @@ function ScopedData({ session }: { session: Session }) {
         </>
       )}
 
-      <p className="text-sm text-muted">
-        <Link href="/" className="underline">
-          Back to home
-        </Link>
-      </p>
     </div>
   );
 }
