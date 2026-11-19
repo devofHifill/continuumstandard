@@ -3,7 +3,7 @@
 > A beginner-friendly study guide and interview-prep notebook.
 > It teaches High-Level Design (HLD) and Low-Level Design (LLD) using a real project, and it is a **living document**: every real design decision made while building gets recorded in the [Design Decision Journal](#9-design-decision-journal-living-record).
 
-**Project status:** F0–F4 built — the MVP success test (admin assigns → learner completes → admin sees the result) passes end to end on mock data. F5 (Super Admin & content editor) next (2026-11-19).
+**Project status:** F0–F5 built — all three roles complete on mock data, including the content editor; the MVP success test passes end to end. F6 (public website) next (2026-11-19).
 Sections marked **📐 Planned** describe the intended design; they become **🛠 Built** once implemented.
 
 ---
@@ -506,6 +506,47 @@ Every admin endpoint starts with `resolveFacility()` or `managedLearner()`. `moc
 
 > 💡 **Beginner tip — 404 vs 403 again:** when Pinecrest's admin opens `/facility/learners/<Harbor learner id>`, the page says "Learner not found" — exactly what it says for an id that doesn't exist. They can't even learn that the id is real.
 
+### 5.11 Platform administration & the content editor
+
+**🛠 Built (F5)**
+
+```
+/admin                        platform totals, facilities overview, quick actions, activity
+/admin/facilities(/[id])      create / edit / deactivate facilities; read-only facility view
+/admin/facility-admins        create, edit, deactivate, resend invite, "reset access"
+/admin/content(/[id])         module list → editor: Details | Video | Decision points | Knowledge check
+/admin/activity               who did what, filter by facility and type
+/admin/leads                  demo requests from the website (D9)
+```
+
+**The content lifecycle (another state machine):**
+
+```
+          create                publish (checklist must be empty)
+ (new) ─────────▶ DRAFT ─────────────────────────────▶ ACTIVE ──disable──▶ DISABLED
+                    ▲                                     ▲                    │
+                    └──── move to draft (never assigned) ─┴──── publish ───────┘
+```
+
+- **DRAFT** — can be saved incomplete; hidden from Facility Admins.
+- **ACTIVE** — assignable. Publishing runs `publishProblems()`: video with a known length, ≥1 valid decision point, ≥1 valid question.
+- **DISABLED** — can't be *newly* assigned, but learners who already have it keep access (no one loses work).
+
+**Referential integrity — the key design idea in the editor:**
+A learner's answer is a row that *points at* a decision point and an option (`checkpoint_responses.option_id`). If the admin deleted that option, the learner's record would point at nothing. So the server refuses to delete any decision point, question or option that learners have already used — they can be **reworded, not removed**. The editor shows these as locked ("Answered by learners — can't delete"). In SQL this is what a **foreign key** constraint does; a real system might also add **content versioning** (publish v2 while v1's history stays intact).
+
+**Other design points:**
+
+| Topic | What we did | Why |
+|---|---|---|
+| Rules shared by UI and server | `lib/content.ts` — `checkpointProblems`, `assessmentProblems`, `publishProblems` | Instant feedback while typing; the server still enforces |
+| Video length read from the video | The editor loads the stream and reads `duration` | No typos; decision points are validated against it |
+| Placing decision points | Scrub the preview, then "Add decision point here" / "Use current time" | Matching the exact moment by eye is how a content editor thinks |
+| Temporary ids | New items get `new-…` ids; the server swaps in real ids on save | The editor can add items before they exist on the server |
+| Safe URLs | Video, poster, captions and thumbnails must be `https://` or a site path | Blocks `javascript:` / `data:` links being stored and rendered |
+| One editor page, four tabs, all mounted | Inactive tabs are hidden, not unmounted | Switching tabs never loses unsaved work |
+| Super Admin reuses Facility Admin endpoints | The facility view calls `getFacilitySummary(facilityId)` | `resolveFacility()` lets a Super Admin name any facility (§5.10) |
+
 ### 5.7 Edge cases
 
 | Situation | Handling |
@@ -581,6 +622,9 @@ A: One "view model" call, `listMyTraining()`, returns each assigned module with 
 
 **Q: How did you build the facility reports?**
 A: Everything starts from one base query that turns each assignment into a row with status, progress, best score and attempts — computed with the same rules the learner sees. The dashboard summary, the assignments list and the progress report all derive from those rows, so their numbers always agree. Every admin endpoint first resolves the facility from the session, so a Facility Admin can only ever see their own facility, and a Super Admin must name one explicitly.
+
+**Q: How do non-developers manage the training content?**
+A: Content is data, not code. A Super Admin builds a module in an editor: details, the video link (its length is read automatically), decision points placed by scrubbing the preview, and a knowledge check. Modules start as drafts and can only be published once a checklist passes. After learners have answered, the server won't let anyone delete a decision point, question or option they used — it can be reworded but not removed — so learner records never point at missing content. That's referential integrity; in a database it's a foreign key, and a fuller system would add content versioning.
 
 **Q: What are the security considerations?**
 A: Hashed passwords, HTTPS, server-side RBAC and tenant scoping, input validation, signed video URLs, and a strict no-patient-data policy.
@@ -699,6 +743,16 @@ Each entry follows the **ADR** (Architecture Decision Record) format — a real 
 | 50 | 2026-11-19 | LLD | Invite links last 7 days (resets: 60 min) and resending replaces the old link | Invites may sit in an inbox for days; resets are more sensitive | Same expiry for both |
 | 51 | 2026-11-19 | LLD | "Needs attention" list: invite pending, locked out, failed check | Makes the dashboard actionable | Numbers only |
 | 52 | 2026-11-19 | LLD | No "unassign" in Phase 1 | Not in the scope document; removing records needs rules about progress already made | Allow unassign |
+| 53 | 2026-11-19 | LLD | Module lifecycle DRAFT → ACTIVE → DISABLED; back to DRAFT only if never assigned | Drafts can't be assigned by accident; disabling never takes training away from learners | Delete modules |
+| 54 | 2026-11-19 | LLD | Publishing gated by `publishProblems()` | A learner can never open a half-built module | Trust the editor |
+| 55 | 2026-11-19 | LLD | Items learners have answered can be reworded but not deleted | Referential integrity — learner records must not point at missing content | Allow deletes (orphaned answers) / full versioning (bigger build) |
+| 56 | 2026-11-19 | LLD | Validation rules in `lib/content.ts`, shared by editor and server | Instant feedback, single source of truth | Duplicate rules in UI and API |
+| 57 | 2026-11-19 | LLD | Video length read from the stream, not typed | Avoids wrong durations; decision points validated against the real length | Manual duration field |
+| 58 | 2026-11-19 | LLD | Media links must be `https://` or a site path | Prevents storing `javascript:`/`data:` URLs | Accept any string |
+| 59 | 2026-11-19 | LLD | Editor tabs stay mounted (hidden) | Switching tabs never loses unsaved edits | Unmount on tab change |
+| 60 | 2026-11-19 | LLD | Thumbnails: pick a bundled image or paste a link (no uploads) | No file storage in Phase 1; uploads belong with the real backend | Build an upload flow now |
+| 61 | 2026-11-19 | LLD | "Reset access" for a Facility Admin emails a reset link; the current password keeps working until used | Admin never sees or sets someone else's password | Admin sets a temporary password |
+| 62 | 2026-11-19 | LLD | Facility deactivation is a switch, not a delete; it signs out everyone at that facility | Contracts pause and resume; records must survive | Delete facility |
 
 ---
 
@@ -720,3 +774,6 @@ Each entry follows the **ADR** (Architecture Decision Record) format — a real 
 | 2026-11-19 | Backend rules are easiest to test without the UI: `mock/learner.test.ts` checks "answer key never sent", attempt limits and completion in milliseconds. The same tests become the contract for the real API. |
 | 2026-11-19 | A hidden screen-reader label (`sr-only`, absolutely positioned) escaped a scrolling table and made the whole page scroll sideways on phones. Fix: `position: relative` on the scroll container. Check layouts at phone width on every phase. |
 | 2026-11-19 | Test tooling can mislead: a browser script that timed out kept running in the page and produced a confusing "paused at 29.6 s" reading. Before calling something a bug, reproduce it cleanly — here a clean rerun showed the player was correct. |
+| 2026-11-19 | CSS grid items default to `min-width: auto`, so a wide table inside a one-column grid stretched the whole page on phones. `grid-cols-1` (= `minmax(0, 1fr)`) lets the column shrink and the table scroll inside its card. |
+| 2026-11-19 | Hot reload doesn't always update a page that Next.js is keeping alive in the background — a stale class name looked like a failed fix. When a fix "doesn't work", reload before digging deeper. |
+| 2026-11-19 | Deleting is the dangerous operation in a content editor. Designing "what happens to learner records?" first led to the reword-not-remove rule. |

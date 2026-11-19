@@ -20,8 +20,10 @@ import {
   toSession,
   validToken,
 } from "./helpers";
+import * as content from "./content";
 import * as facility from "./facility";
 import * as learner from "./learner";
+import * as platform from "./platform";
 import { getDb, getStoredSession, resetStore, setStoredSession, subscribe, updateDb } from "./store";
 
 export { findByEmail, startSession } from "./helpers";
@@ -332,6 +334,31 @@ export class MockDataService implements DataService {
   assignTraining = facility.assignTraining;
   listFacilityAssignments = facility.listFacilityAssignments;
   getLearnerReport = facility.getLearnerReport;
+
+  // ── Platform administration (F5) — ./platform.ts ────────
+  getPlatformSummary = platform.getPlatformSummary;
+  listFacilityRows = platform.listFacilityRows;
+  createFacility = platform.createFacility;
+  updateFacility = platform.updateFacility;
+  setFacilityActive = platform.setFacilityActive;
+  listFacilityAdmins = platform.listFacilityAdmins;
+  createFacilityAdmin = platform.createFacilityAdmin;
+  updateFacilityAdmin = platform.updateFacilityAdmin;
+  setAdminActive = platform.setAdminActive;
+  resendAdminInvite = platform.resendAdminInvite;
+  sendAdminPasswordReset = platform.sendAdminPasswordReset;
+  listActivity = platform.listActivity;
+  listLeads = platform.listLeads;
+
+  // ── Training content (F5) — ./content.ts ────────────────
+  listModuleRows = content.listModuleRows;
+  getModuleForEdit = content.getModuleForEdit;
+  createModule = content.createModule;
+  updateModuleDetails = content.updateModuleDetails;
+  saveModuleVideo = content.saveModuleVideo;
+  saveCheckpoints = content.saveCheckpoints;
+  saveAssessment = content.saveAssessment;
+  setModuleStatus = content.setModuleStatus;
 
   // ── Demo tooling ────────────────────────────────────────
   async resetDemoData() {

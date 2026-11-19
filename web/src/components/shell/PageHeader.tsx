@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { Card, CardBody } from "@/components/ui";
 
 export function PageHeader({ title, description, actions }: { title: string; description?: string; actions?: ReactNode }) {
   return (
@@ -10,21 +9,5 @@ export function PageHeader({ title, description, actions }: { title: string; des
       </div>
       {actions}
     </div>
-  );
-}
-
-/** Placeholder for a page whose content arrives in a later phase. */
-export function ComingSoon({ phase, items }: { phase: string; items: string[] }) {
-  return (
-    <Card className="border-dashed">
-      <CardBody className="flex flex-col gap-2">
-        <p className="text-sm font-semibold">Coming in phase {phase}</p>
-        <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
-          {items.map((i) => (
-            <li key={i}>{i}</li>
-          ))}
-        </ul>
-      </CardBody>
-    </Card>
   );
 }

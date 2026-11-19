@@ -16,7 +16,7 @@ Created: 2026-11-19 · Approach: frontend-first, backed by a mock data layer
 | F2 | App shell & auth screens | Auth & RBAC (UI) | ✅ | 7 / 7 |
 | F3 | Learner experience | Learner half of MVP test | ✅ | 8 / 8 |
 | F4 | Facility Admin | Admin half of MVP test | ✅ | 7 / 7 |
-| F5 | Super Admin & content editor | Data-driven content | ⬜ | 0 / 9 |
+| F5 | Super Admin & content editor | Data-driven content | ✅ | 9 / 9 |
 | F6 | Public marketing website | Website + lead capture | ⬜ | 0 / 7 |
 | F7 | QA & polish | Definition of Done | ⬜ | 0 / 7 |
 
@@ -106,15 +106,15 @@ Created: 2026-11-19 · Approach: frontend-first, backed by a mock data layer
 ### F5 — Super Admin & content
 | ID | Task | Status | Notes |
 |---|---|---|---|
-| F5.1 | Dashboard: summary cards, recent activity, quick actions | ⬜ | |
-| F5.2 | Facilities list + create/edit + activate/deactivate | ⬜ | |
-| F5.3 | Facility Admins: create/edit, resend invite/reset access | ⬜ | D11 |
-| F5.4 | Training content list (draft/active, enable/disable) | ⬜ | |
-| F5.5 | Module editor: details, category, thumbnail, video | ⬜ | D12 |
-| F5.6 | Checkpoint editor: timestamp picker on video, question, options, rationale(s) | ⬜ | D5 |
-| F5.7 | Knowledge check editor: questions, options, correct answer, pass mark, retries | ⬜ | D6 |
-| F5.8 | Basic activity view | ⬜ | |
-| F5.9 | Leads list (demo requests) | ⬜ | D9 — confirm |
+| F5.1 | Dashboard: summary cards, recent activity, quick actions | ✅ | Plus a facilities overview table |
+| F5.2 | Facilities list + create/edit + activate/deactivate | ✅ | Plus read-only facility view (summary, admins, learners, activity) |
+| F5.3 | Facility Admins: create/edit, resend invite/reset access | ✅ | D11. Also deactivate/reactivate |
+| F5.4 | Training content list (draft/active, enable/disable) | ✅ | Publish gated by a checklist; disable keeps existing learners' access |
+| F5.5 | Module editor: details, category, thumbnail, video | ✅ | D12. Video length read from the stream; https-only media links |
+| F5.6 | Checkpoint editor: timestamp picker on video, question, options, rationale(s) | ✅ | D5. "Use current time"; answered items locked against deletion |
+| F5.7 | Knowledge check editor: questions, options, correct answer, pass mark, retries | ✅ | D6 |
+| F5.8 | Basic activity view | ✅ | Filter by facility and type |
+| F5.9 | Leads list (demo requests) | ✅ | D9 — still to confirm with client (in-app list vs CRM) |
 
 ### F6 — Public website
 | ID | Task | Status | Notes |
@@ -181,6 +181,7 @@ Created: 2026-11-19 · Approach: frontend-first, backed by a mock data layer
 | Date | Change |
 |---|---|
 | 2026-11-19 | Plan created; defaults D1–D14 agreed |
+| 2026-11-19 | F5 complete: Super Admin dashboard, facilities (+ detail), Facility Admins (invite, reset access), activity, demo requests, and the module editor (details, video, decision points, knowledge check, publish/disable). Learner answers lock content against deletion. Shared content rules + 17 new tests (71 total). Fixed grids widening pages on phones; removed placeholder dashboard components |
 | 2026-11-19 | F4 complete: Facility Admin dashboard, learners (add/edit/deactivate/reactivate/resend invite), learner detail, assign training, assignments list, progress report. **MVP success test passes end to end in the browser.** 13 new unit tests for tenant isolation and admin rules (54 total). Fixed tables widening the page on phones |
 | 2026-11-19 | F3 complete: learner dashboard, training list, module intro/review, player, knowledge check + results, My Progress. New `listMyTraining` view-model endpoint and learner rules with 18 new unit tests (41 total). Fixed a player race that could drop the "video finished" save. `/poc` kept for the Gate 2 demo |
 | 2026-11-19 | F2 complete: role areas `/admin`, `/facility`, `/learn` + `/profile`; route guard; login/forgot/reset/set-password; profile. Temporary `/dashboard` removed (its scoped-data preview now sits on each role dashboard). Mock DB version 3 (per-user passwords, auth tokens, demo outbox). Next.js instant-navigation validation set to opt-in |
