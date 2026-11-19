@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens — placeholder palette until the client supplies brand assets.
+ * Calm, clinical, trustworthy: deep teal primary, warm neutral surfaces.
+ * Components use these tokens (e.g. bg-primary, text-muted), never raw hex.
+ */
+:root {
+  --background: #f7f8f8;
+  --surface: #ffffff;
+  --surface-muted: #eef1f1;
+  --foreground: #14201f;
+  --muted: #5b6b69;
+  --border: #d9e0df;
+  --primary: #0f6b66;
+  --primary-hover: #0b5753;
+  --primary-foreground: #ffffff;
+  --primary-soft: #e3f1ef;
+  --success: #1f7a3f;
+  --success-soft: #e4f4e9;
+  --warning: #9a5b00;
+  --warning-soft: #fbf0dc;
+  --danger: #b3261e;
+  --danger-soft: #fbe7e6;
+  --info: #24589e;
+  --info-soft: #e6eef9;
+  --ring: #2a9d95;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-ring: var(--ring);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --radius-card: 0.75rem;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
