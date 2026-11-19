@@ -1,4 +1,6 @@
+import type { NextStep } from "@/lib/learning";
 import type {
+  ActivityEvent,
   CheckpointOption,
   CheckpointResponse,
   DecisionCheckpoint,
@@ -6,6 +8,7 @@ import type {
   ID,
   ScenarioVideo,
   LearnerProgress,
+  ProgressStatus,
   Session,
   TrainingAssignment,
   TrainingModule,
@@ -80,11 +83,86 @@ export interface DataService {
   /** Save playback position. `furthestSec` only ever increases on the server side. */
   saveProgress(moduleId: ID, update: ProgressUpdate): Promise<LearnerProgress>;
 
+  // ── Learner (F3) ────────────────────────────────────────
+  /**
+   * The signed-in learner's assigned training, one row per module with everything a
+   * card needs (status, progress, attempts, next step) — one request instead of many.
+   */
+  listMyTraining(): Promise<MyTrainingItem[]>;
+  /** One assigned module, plus the learner's decision-point answers (for review). */
+  getMyTraining(moduleId: ID): Promise<MyTrainingDetail>;
+  /**
+   * The knowledge check for an assigned module, WITHOUT the answer key.
+   * Only available once the scenario video is watched, not yet passed, and attempts remain.
+   */
+  getMyAssessment(moduleId: ID): Promise<LearnerAssessment>;
+  /** Score on the server; completes the module on a pass. Correct answers are revealed only once passed. */
+  submitAssessment(moduleId: ID, answers: Record<ID, ID>): Promise<AssessmentResult>;
+  /** The learner's own recent activity, newest first. */
+  listMyActivity(limit?: number): Promise<ActivityEvent[]>;
+
   // ── Demo tooling ────────────────────────────────────────
   /** Restore the seed data and sign out. Mock only; the real API won't have this. */
   resetDemoData(): Promise<void>;
   /** Subscribe to data/session changes (for React's useSyncExternalStore). */
   subscribe(listener: () => void): () => void;
+}
+
+export interface AttemptSummary {
+  id: ID;
+  scorePercent: number;
+  passed: boolean;
+  submittedAt: string;
+}
+
+export interface MyTrainingItem {
+  module: TrainingModule;
+  assignedAt: string;
+  status: ProgressStatus;
+  progress: LearnerProgress;
+  videoDurationSec: number;
+  checkpointCount: number;
+  answeredCount: number;
+  hasAssessment: boolean;
+  questionCount: number;
+  passPercent: number | null;
+  /** Newest first. */
+  attempts: AttemptSummary[];
+  attemptsRemaining: number | null;
+  bestScorePercent: number | null;
+  nextStep: NextStep;
+}
+
+export interface MyTrainingDetail extends MyTrainingItem {
+  decisions: { checkpoint: DecisionCheckpoint; response?: CheckpointResponse }[];
+}
+
+/** A knowledge check as the learner receives it: no `isCorrect`, no feedback. */
+export interface LearnerAssessment {
+  id: ID;
+  moduleId: ID;
+  passPercent: number;
+  attemptsUsed: number;
+  attemptsRemaining: number | null;
+  questions: { id: ID; text: string; options: { id: ID; label: string }[] }[];
+}
+
+export interface AssessmentResult {
+  attempt: AttemptSummary;
+  correctCount: number;
+  total: number;
+  passPercent: number;
+  attemptsRemaining: number | null;
+  /** Whether correct answers and explanations are included (only after a pass). */
+  answersRevealed: boolean;
+  review: {
+    questionId: ID;
+    text: string;
+    chosenLabel: string | null;
+    correct: boolean;
+    correctLabel?: string;
+    feedback?: string;
+  }[];
 }
 
 /** INVITE = first password for a new account; RESET = forgotten password. */

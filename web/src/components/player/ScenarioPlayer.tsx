@@ -71,7 +71,7 @@ export function ScenarioPlayer({ bundle, onEnded, onDebug }: Props) {
   const furthestRef = useRef(progress.furthestSec);
   /** Latest known position. Survives Next.js hiding/restoring the page (see below). */
   const positionRef = useRef(progress.lastPositionSec);
-  const savingRef = useRef(false);
+  const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
   const videoCompletedRef = useRef(progress.videoCompleted);
   useEffect(() => {
     stateRef.current = state;
@@ -90,25 +90,32 @@ export function ScenarioPlayer({ bundle, onEnded, onDebug }: Props) {
   }, [onDebug, state, currentTime, furthest, seekLimit, saveStatus]);
 
   // ── Saving ─────────────────────────────────────────────
+  /**
+   * Saves run one after another through a promise queue: none overlap and none are
+   * dropped. (An earlier version skipped a save while another was in flight — which
+   * could lose the "video finished" save and block the knowledge check.)
+   */
   const save = useCallback(
-    async (extra: { videoCompleted?: boolean } = {}) => {
-      const el = videoRef.current;
-      if (!el || savingRef.current) return;
-      savingRef.current = true;
-      setSaveStatus("saving");
-      try {
-        await data.saveProgress(module.id, {
-          positionSec: (positionRef.current = el.currentTime),
-          furthestSec: furthestRef.current,
-          videoCompleted: extra.videoCompleted || videoCompletedRef.current,
-        });
-        setSaveStatus("saved");
-      } catch {
-        // Not fatal: the next periodic save retries.
-        setSaveStatus("error");
-      } finally {
-        savingRef.current = false;
-      }
+    (extra: { videoCompleted?: boolean } = {}): Promise<void> => {
+      if (extra.videoCompleted) videoCompletedRef.current = true;
+      const run = async () => {
+        const el = videoRef.current;
+        if (!el) return;
+        setSaveStatus("saving");
+        try {
+          await data.saveProgress(module.id, {
+            positionSec: (positionRef.current = el.currentTime),
+            furthestSec: furthestRef.current,
+            videoCompleted: videoCompletedRef.current,
+          });
+          setSaveStatus("saved");
+        } catch {
+          // Not fatal: the next periodic save retries.
+          setSaveStatus("error");
+        }
+      };
+      saveQueueRef.current = saveQueueRef.current.then(run);
+      return saveQueueRef.current;
     },
     [module.id],
   );
@@ -261,8 +268,8 @@ export function ScenarioPlayer({ bundle, onEnded, onDebug }: Props) {
       setCurrentTime(el.duration);
       videoCompletedRef.current = true;
       dispatch({ type: "ENDED" });
-      void save({ videoCompleted: true });
-      onEnded?.();
+      // Tell the page only once "finished" is saved, so the next step (the check) is unlocked.
+      void save({ videoCompleted: true }).then(() => onEnded?.());
     };
     const onWaiting = () => setBuffering(true);
     const onPlaying = () => setBuffering(false);

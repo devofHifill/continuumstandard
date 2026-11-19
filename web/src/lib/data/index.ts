@@ -9,9 +9,14 @@ export const data: DataService = new MockDataService();
 
 export {
   ServiceError,
+  type AssessmentResult,
+  type AttemptSummary,
   type AuthTokenPurpose,
   type CheckpointResult,
   type DataService,
+  type LearnerAssessment,
+  type MyTrainingDetail,
+  type MyTrainingItem,
   type PlaybackBundle,
   type ProgressUpdate,
 } from "./service";

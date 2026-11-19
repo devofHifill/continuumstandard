@@ -3,7 +3,7 @@
 > A beginner-friendly study guide and interview-prep notebook.
 > It teaches High-Level Design (HLD) and Low-Level Design (LLD) using a real project, and it is a **living document**: every real design decision made while building gets recorded in the [Design Decision Journal](#9-design-decision-journal-living-record).
 
-**Project status:** F0 (foundation), F1 (video engine POC) and F2 (app shell, roles, sign-in & password flows) built; F3 (learner experience) next (2026-11-19).
+**Project status:** F0–F3 built: foundation, video engine POC, app shell & sign-in, and the full learner journey. F4 (Facility Admin) next (2026-11-19).
 Sections marked **📐 Planned** describe the intended design; they become **🛠 Built** once implemented.
 
 ---
@@ -425,6 +425,44 @@ User            Forgot page          API (mock)                   Email
 
 > 💡 **Beginner tip — a framework surprise:** Next.js 16 keeps recently visited pages mounted but hidden (React `<Activity>`), so their state survives navigation. That broke two things in testing — the login page remembered "loading" from an earlier sign-in, and a used reset link stuck on "Checking…". The fix (`useResetOnHide`) resets one-off flags, and clears password fields, when a page is hidden.
 
+### 5.9 The learner journey
+
+**🛠 Built (F3)**
+
+```
+/learn                         dashboard: counts, "continue where you left off", cards, activity
+/learn/training                all assigned modules, filter by status
+/learn/training/[id]           intro → status → read-only review of your decisions (D7)
+/learn/training/[id]/play      scenario player (F1 engine)
+/learn/training/[id]/check     knowledge check → result
+/learn/progress                table of modules, best scores, attempts, history
+```
+
+**Module lifecycle (a state machine at the business level):**
+
+```
+NOT_STARTED ──play──▶ IN_PROGRESS ──video watched──▶ (check unlocked) ──pass──▶ COMPLETED
+                                                         │  fail (attempts left) ↺
+                                                         └─ fail (no attempts left) → LOCKED_OUT (contact admin)
+```
+
+Two small pure functions drive every screen: `deriveStatus()` (which state is it in?) and `nextStep()` (what should the main button do?). Cards, the dashboard, the intro page and My Progress all call them, so they always agree (`lib/learning.ts`, unit-tested).
+
+**Key LLD decisions in F3:**
+
+| Topic | What we did | Why |
+|---|---|---|
+| **View-model endpoint** | `listMyTraining()` returns one ready-made row per module (status, progress, attempts, next step) | One request instead of 5–6 per card (avoids the *N+1 request* problem). This is the *Backend-for-Frontend* idea. |
+| **Answer key never leaves the server** | `getMyAssessment()` strips `isCorrect` and explanations; a unit test checks the JSON | Anything sent to the browser can be read in dev tools. |
+| **Server-side scoring** | The browser sends only "which option did I pick"; the server scores | A client can't send "I scored 100%". |
+| **Reveal policy** | Correct answers + explanations shown only after a pass (or when no attempts are left) | Showing them after a fail would let learners pass by retrying without learning. |
+| **Gatekeeping** | Check unlocks only after the video is watched; no retakes after a pass; attempt limit enforced | Same rules in the UI *and* the server — the UI just explains them. |
+| **Completion rule** | COMPLETED = video watched **and** check passed | Matches the success test: the admin sees a meaningful "completed". |
+
+> 💡 **Beginner tip — "never trust the client":** every rule above is enforced in the (mock) backend, and `mock/learner.test.ts` tests them without a browser. The UI hides buttons too, but only for convenience.
+
+> 💡 **Beginner tip — a race condition we found:** the player used to *skip* a progress save if another was still running. If that happened exactly when the video ended, the "finished" flag was lost and the knowledge check stayed locked. Fix: a **promise queue** — saves run one after another, none dropped — and the "Take knowledge check" button appears only after the finish is saved.
+
 ### 5.7 Edge cases
 
 | Situation | Handling |
@@ -491,6 +529,12 @@ A: It's data-driven — modules, timestamps, questions and rationales live in th
 
 **Q: How does login and password reset work?**
 A: Email + password sign-in, plus emailed single-use links for invites and resets that expire after 60 minutes. The forgot-password page always gives the same answer so it can't be used to discover accounts, `next=` redirects are limited to in-app paths, and every request re-checks the account — so deactivating someone signs them out immediately. Routing uses one `canAccess(role, path)` function shared by the menu, the guard and the redirects. All of it is currently enforced in a mock; the real API must enforce it again server-side, with hashed passwords.
+
+**Q: How do you stop learners cheating on the knowledge check?**
+A: The browser never receives the answer key — the server strips `isCorrect` before sending questions, and a test checks the JSON. The browser sends only the chosen options and the server scores them. Correct answers are revealed only after a pass, the check unlocks only after the video is watched, and attempt limits and "no retakes after passing" are enforced on the server, not just hidden in the UI.
+
+**Q: How did you design the data for the learner dashboard?**
+A: One "view model" call, `listMyTraining()`, returns each assigned module with its status, progress, attempts and next step already worked out. That avoids the N+1 problem of fetching module, progress, attempts and answers separately for every card, and keeps the status rules in one place on the server (Backend-for-Frontend pattern).
 
 **Q: What are the security considerations?**
 A: Hashed passwords, HTTPS, server-side RBAC and tenant scoping, input validation, signed video URLs, and a strict no-patient-data policy.
@@ -592,6 +636,14 @@ Each entry follows the **ADR** (Architecture Decision Record) format — a real 
 | 33 | 2026-11-19 | LLD | Per-user passwords in the mock + demo one-click sign-in that skips the password | Lets password changes be tested while keeping demos fast | One shared demo password |
 | 34 | 2026-11-19 | LLD | `useResetOnHide` for one-off form state | Next.js 16 keeps hidden pages' state; "loading"/"sent" flags and typed passwords must not survive | Remount pages on every visit |
 | 35 | 2026-11-19 | LLD | Next.js automatic "instant navigation" validation set to opt-in | Client-side guard means signed-in pages can't be prerendered; revisit with server auth | Leave warnings on every page |
+| 36 | 2026-11-19 | LLD | `listMyTraining()` view-model endpoint (Backend-for-Frontend) | One request per page instead of N+1; status rules stay server-side | Many small calls from each card |
+| 37 | 2026-11-19 | LLD | Knowledge check sent without `isCorrect`/feedback; scored server-side | The client can't read or fake answers | Score in the browser |
+| 38 | 2026-11-19 | LLD | Correct answers revealed only after a pass (or when out of attempts) | Prevents passing by trial and error | Always show answers |
+| 39 | 2026-11-19 | LLD | Check unlocks after the video; no retakes after passing | Order of learning matters; a pass is final (D7 read-only review) | Allow anytime / unlimited retakes |
+| 40 | 2026-11-19 | LLD | `deriveStatus()` + `nextStep()` pure functions used by every learner screen | One rule, many screens — they can't disagree | Each page works it out itself |
+| 41 | 2026-11-19 | LLD | Player saves go through a promise queue; "video finished" fires only after it's saved | Fixes a race that could lose the finish and lock the check | Skip a save if one is running |
+| 42 | 2026-11-19 | LLD | "Start" goes to the intro page first; other steps jump straight to the player/check | Learners see objectives before starting; returning learners skip a click | Always go to intro |
+| 43 | 2026-11-19 | LLD | Signed-in layout wrapped in `<Suspense>` | The guard reads the URL, which isn't known when prerendering dynamic routes | Make every route fully dynamic |
 
 ---
 
@@ -608,3 +660,6 @@ Each entry follows the **ADR** (Architecture Decision Record) format — a real 
 | 2026-11-19 | Testing in a hidden browser tab revealed that animation frames pause there — which led to the `timeupdate` safety net. Real-world conditions find bugs unit tests don't. |
 | 2026-11-19 | Next.js 16 keeps visited pages alive in the background. Code that assumes "navigating away unmounts the page" breaks: stale `loading` flags blocked a redirect and the video player tried to auto-play on return. Design components to be hidden and shown, not just mounted once. |
 | 2026-11-19 | Two redirects racing (the guard's "signed out → login?next" vs. sign-out's "login?reason") produced the wrong page. A small "we're leaving on purpose" flag fixed it — watch for competing side effects reacting to the same state change. |
+| 2026-11-19 | "Skip if busy" is a dangerous optimisation: dropping a save looked harmless until the dropped one was the important one. Prefer queuing over skipping when every write matters. |
+| 2026-11-19 | The dev server passed but the production build failed (URL hooks outside `<Suspense>` on dynamic routes). Always run the production build before calling a phase done. |
+| 2026-11-19 | Backend rules are easiest to test without the UI: `mock/learner.test.ts` checks "answer key never sent", attempt limits and completion in milliseconds. The same tests become the contract for the real API. |

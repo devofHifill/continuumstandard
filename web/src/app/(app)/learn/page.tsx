@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { RoleDashboard } from "@/components/shell/RoleDashboard";
+import { LearnerDashboard } from "@/components/learner/LearnerDashboard";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
 export default function Page() {
-  return <RoleDashboard phase="F3" items={["Your assigned training with status and Start/Continue", "Recent activity and results"]} />;
+  return <LearnerDashboard />;
 }
