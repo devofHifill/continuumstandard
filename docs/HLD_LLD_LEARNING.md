@@ -3,7 +3,7 @@
 > A beginner-friendly study guide and interview-prep notebook.
 > It teaches High-Level Design (HLD) and Low-Level Design (LLD) using a real project, and it is a **living document**: every real design decision made while building gets recorded in the [Design Decision Journal](#9-design-decision-journal-living-record).
 
-**Project status:** Planning complete, frontend not yet started (2026-11-19).
+**Project status:** F0 (foundation + mock data layer) built; F1 (video engine) next (2026-11-19).
 Sections marked **📐 Planned** describe the intended design; they become **🛠 Built** once implemented.
 
 ---
@@ -303,6 +303,8 @@ Learner     Browser(Player)          API                         DB
 
 ### 5.6 Frontend structure (mock-first)
 
+**🛠 Built (F0)** — the data layer below exists in `web/src/lib/data/`. The video provider adapter is still 📐 Planned (F1).
+
 ```
 UI pages/components
       │  call
@@ -314,6 +316,21 @@ Data service interface   ←── same function names for mock and real
 ```
 
 This is the **Adapter / Repository pattern**: the UI depends on an *interface*, not on where data really comes from. Swapping mock → real needs no UI changes. The video player uses the same idea (a provider adapter for HTML5/hls.js now, Mux later).
+
+**How it's really built (F0):**
+
+| File | Role in the design |
+|---|---|
+| `lib/types.ts` | The data model from §5.1 as TypeScript types — the "contract" both sides agree on |
+| `lib/data/service.ts` | The `DataService` **interface** — the list of things the UI may ask the backend for |
+| `lib/data/mock/mockService.ts` | The mock **implementation**. It applies the same role + facility rules the real API must (`inScope()` = the §5.3 scoping helper; out-of-scope records throw NOT_FOUND, i.e. 404) |
+| `lib/data/mock/store.ts` | Fake "database": one JSON blob in `localStorage`, so data survives a refresh |
+| `lib/data/index.ts` | The **one line** that picks the implementation: `export const data = new MockDataService()` |
+| `lib/data/hooks.ts` | React glue: `useSession()` and `useQuery()` re-render the UI when data changes |
+
+> 💡 **Beginner tip — why the mock enforces security rules at all:** if the mock let everyone see everything, the UI would be built against the wrong behaviour and break when the real API starts saying "no". Making the mock strict means the screens are already correct for the real backend.
+
+> 💡 **Beginner tip — hydration:** Next.js renders the page on the server first, then React "hydrates" it in the browser. The server can't read `localStorage`, so anything stored there (the session, demo accounts) is only read *after* hydration — otherwise the server HTML and browser HTML differ and React throws a *hydration mismatch* error. That's what `useHydrated()` and the server snapshot in `useSession()` handle.
 
 ### 5.7 Edge cases
 
@@ -450,6 +467,12 @@ Each entry follows the **ADR** (Architecture Decision Record) format — a real 
 | 7 | 2026-11-19 | LLD | Feedback: general and/or per-option rationale; grading only in quiz | Flexible for client content | Single rationale only |
 | 8 | 2026-11-19 | LLD | New users get an invite link to set password | Avoids sending passwords by email | Temporary passwords |
 | 9 | 2026-11-19 | LLD | Seed two facilities in mock data | Lets us demonstrate tenant isolation in the UI | One facility |
+| 10 | 2026-11-19 | HLD | Frontend lives in `web/`; backend will get its own folder (e.g. `api/`) | Keeps the two deployable parts separate in one repo (a simple *monorepo*) | Frontend at repo root |
+| 11 | 2026-11-19 | LLD | Mock enforces the same role + facility scoping as the real API, returning NOT_FOUND for out-of-scope records | UI is built against correct "no" behaviour from day one | Permissive mock |
+| 12 | 2026-11-19 | LLD | Mock database = one versioned JSON blob in `localStorage`, with a Reset button | Survives refresh (needed for the §7.1 test); version number discards stale data when the seed shape changes | In-memory only (lost on refresh); IndexedDB (more complex) |
+| 13 | 2026-11-19 | LLD | Login returns the same error for "unknown email" and "wrong password" | Prevents *user enumeration* — attackers can't discover which emails have accounts | Separate messages |
+| 14 | 2026-11-19 | LLD | Added `Lead` and `ActivityEvent` types beyond the §8 model | Needed for demo-request capture (D9) and Super Admin activity (F5.8) | Leave out until backend |
+| 15 | 2026-11-19 | LLD | Demo tools (quick sign-in, account switcher, reset) behind `NEXT_PUBLIC_DEMO_TOOLS` flag | Fast client demos, but can be switched off for any real deployment | Separate demo build |
 
 ---
 
@@ -459,3 +482,5 @@ Each entry follows the **ADR** (Architecture Decision Record) format — a real 
 |---|---|
 | 2026-11-19 | Requirements documents can contradict themselves (wireframe nav vs sitemap). Verifying requirements before planning caught it early. |
 | 2026-11-19 | Hiding UI isn't security — tenant isolation must be enforced on the server. Frontend checks are for user experience only. |
+| 2026-11-19 | Frameworks change fast: Next.js 16 ships its own docs inside `node_modules/next/dist/docs/`. Reading the docs for the installed version beats relying on memory. |
+| 2026-11-19 | Server rendering can't see browser storage. Reading `localStorage` during the first render causes hydration mismatches, so browser-only data is read after hydration. |

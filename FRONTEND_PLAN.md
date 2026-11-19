@@ -11,7 +11,7 @@ Created: 2026-11-19 · Approach: frontend-first, backed by a mock data layer
 
 | Phase | Scope | Proves | Status | Done / Total |
 |---|---|---|---|---|
-| F0 | Setup, design tokens, mock data layer, seed, mock login | Foundation | ⬜ | 0 / 7 |
+| F0 | Setup, design tokens, mock data layer, seed, mock login | Foundation | ✅ | 7 / 7 |
 | F1 | Scenario video engine POC | Gate 2 / §7.1 | ⬜ | 0 / 9 |
 | F2 | App shell & auth screens | Auth & RBAC (UI) | ⬜ | 0 / 7 |
 | F3 | Learner experience | Learner half of MVP test | ⬜ | 0 / 8 |
@@ -48,13 +48,13 @@ Created: 2026-11-19 · Approach: frontend-first, backed by a mock data layer
 ### F0 — Setup & foundation
 | ID | Task | Status | Notes |
 |---|---|---|---|
-| F0.1 | Scaffold Next.js + TypeScript + Tailwind, lint/format | ⬜ | |
-| F0.2 | Design tokens (colors, type, spacing) + base components (button, input, card, table, badge, modal) | ⬜ | |
-| F0.3 | TypeScript types matching the §8 data model | ⬜ | Facility, User, TrainingModule, ScenarioVideo, DecisionCheckpoint, CheckpointResponse, KnowledgeAssessment, AssessmentQuestion/AnswerOption, AssessmentAttempt, TrainingAssignment, LearnerProgress |
-| F0.4 | Mock data service layer (same interface the real API will use), with localStorage persistence | ⬜ | Swap to real API without UI changes |
-| F0.5 | Seed data: 2 facilities, 1 Super Admin, admins + learners per facility, 2–3 sample modules | ⬜ | Second facility is for the isolation demo |
-| F0.6 | Mock login with seeded test accounts + role switcher (dev only) | ⬜ | |
-| F0.7 | "Reset demo data" control | ⬜ | |
+| F0.1 | Scaffold Next.js + TypeScript + Tailwind, lint/format | ✅ | Next.js 16.4 in `web/`; ESLint; no separate formatter yet |
+| F0.2 | Design tokens (colors, type, spacing) + base components (button, input, card, table, badge, modal) | ✅ | Placeholder palette until client brand assets arrive |
+| F0.3 | TypeScript types matching the §8 data model | ✅ | Facility, User, TrainingModule, ScenarioVideo, DecisionCheckpoint, CheckpointResponse, KnowledgeAssessment, AssessmentQuestion/AnswerOption, AssessmentAttempt, TrainingAssignment, LearnerProgress |
+| F0.4 | Mock data service layer (same interface the real API will use), with localStorage persistence | ✅ | `DataService` interface; mock enforces role + facility scoping. Interface grows per phase |
+| F0.5 | Seed data: 2 facilities, 1 Super Admin, admins + learners per facility, 2–3 sample modules | ✅ | 2 facilities, 12 users (incl. invited + deactivated), 3 modules (1 draft), sample progress |
+| F0.6 | Mock login with seeded test accounts + role switcher (dev only) | ✅ | Login page + bottom demo toolbar; off via `NEXT_PUBLIC_DEMO_TOOLS=false` |
+| F0.7 | "Reset demo data" control | ✅ | In demo toolbar, with confirmation |
 
 ### F1 — Scenario video engine POC (Gate 2)
 | ID | Task | Status | Notes |
@@ -181,3 +181,4 @@ Created: 2026-11-19 · Approach: frontend-first, backed by a mock data layer
 | Date | Change |
 |---|---|
 | 2026-11-19 | Plan created; defaults D1–D14 agreed |
+| 2026-11-19 | F0 complete: Next.js app in `web/`, mock data layer, seed data, demo login/toolbar. Temporary `/dashboard` preview shows scoped data per account. Added `Lead` and `ActivityEvent` types (not in §8) for D9 and F5.8 |
