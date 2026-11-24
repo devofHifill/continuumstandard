@@ -24,6 +24,7 @@ import * as content from "./content";
 import * as facility from "./facility";
 import * as learner from "./learner";
 import * as platform from "./platform";
+import * as publicSite from "./publicSite";
 import { getDb, getStoredSession, resetStore, setStoredSession, subscribe, updateDb } from "./store";
 
 export { findByEmail, startSession } from "./helpers";
@@ -334,6 +335,9 @@ export class MockDataService implements DataService {
   assignTraining = facility.assignTraining;
   listFacilityAssignments = facility.listFacilityAssignments;
   getLearnerReport = facility.getLearnerReport;
+
+  // ── Public website (F6) — ./publicSite.ts ───────────────
+  submitDemoRequest = publicSite.submitDemoRequest;
 
   // ── Platform administration (F5) — ./platform.ts ────────
   getPlatformSummary = platform.getPlatformSummary;

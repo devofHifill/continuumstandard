@@ -51,7 +51,10 @@ export function LeadsPage() {
                       <span className="font-medium">{l.name}</span>
                       {l.role && <div className="text-xs text-muted">{l.role}</div>}
                     </Td>
-                    <Td>{l.organization}</Td>
+                    <Td>
+                      {l.organization}
+                      {l.facilities && <div className="text-xs text-muted">{l.facilities} facilit{l.facilities === "1" ? "y" : "ies"}</div>}
+                    </Td>
                     <Td>
                       <a href={`mailto:${l.email}`} className="text-primary hover:underline">
                         {l.email}

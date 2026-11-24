@@ -102,7 +102,7 @@ function Sidebar({ session, onClose }: { session: Session; onClose?: () => void 
     <>
       <div className="flex items-start justify-between gap-2 border-b border-border px-5 py-4">
         <div className="min-w-0">
-          <Link href={roleHome(session.role)} className="block font-semibold leading-tight">
+          <Link href={roleHome(session.role)} className="block font-display text-lg leading-tight text-primary">
             The Continuum-Standard
           </Link>
           <p className="mt-1 truncate text-sm text-muted">

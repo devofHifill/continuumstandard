@@ -158,7 +158,11 @@ export interface Lead {
   organization: string;
   role?: string;
   phone?: string;
+  /** How many facilities they run (website form: "1", "2–5", …). */
+  facilities?: string;
   message?: string;
+  /** Where the request came from, e.g. "homepage". */
+  source?: string;
   createdAt: ISODate;
 }
 
@@ -166,6 +170,7 @@ export interface Lead {
 export interface ActivityEvent {
   id: ID;
   type:
+    | "LEAD_RECEIVED"
     | "FACILITY_CREATED"
     | "FACILITY_DEACTIVATED"
     | "FACILITY_REACTIVATED"

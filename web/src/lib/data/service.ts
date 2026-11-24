@@ -54,6 +54,10 @@ export interface DataService {
   /** Learners and admins may edit their own name and job title; email is managed by admins. */
   updateMyProfile(update: { name: string; jobTitle?: string }): Promise<User>;
 
+  // ── Public website (F6) ─────────────────────────────────
+  /** "Request a Demo" form. Public — no sign-in. Shows up in Super Admin → Demo Requests (D9). */
+  submitDemoRequest(input: DemoRequestInput): Promise<void>;
+
   // ── Facilities ──────────────────────────────────────────
   /** Super Admin: all facilities. Facility Admin / Learner: only their own. */
   listFacilities(): Promise<Facility[]>;
@@ -221,6 +225,16 @@ export interface AssessmentResult {
     correctLabel?: string;
     feedback?: string;
   }[];
+}
+
+export interface DemoRequestInput {
+  name: string;
+  organization: string;
+  email: string;
+  phone?: string;
+  facilities?: string;
+  message?: string;
+  source?: string;
 }
 
 export interface LearnerInput {

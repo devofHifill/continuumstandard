@@ -3,7 +3,7 @@
 > A beginner-friendly study guide and interview-prep notebook.
 > It teaches High-Level Design (HLD) and Low-Level Design (LLD) using a real project, and it is a **living document**: every real design decision made while building gets recorded in the [Design Decision Journal](#9-design-decision-journal-living-record).
 
-**Project status:** F0–F5 built — all three roles complete on mock data, including the content editor; the MVP success test passes end to end. F6 (public website) next (2026-11-19).
+**Project status:** F0–F6 built — public website, all three roles and the content editor on mock data; the MVP success test passes end to end. F7 (QA & polish) next (2026-11-24).
 Sections marked **📐 Planned** describe the intended design; they become **🛠 Built** once implemented.
 
 ---
@@ -547,6 +547,42 @@ A learner's answer is a row that *points at* a decision point and an option (`ch
 | One editor page, four tabs, all mounted | Inactive tabs are hidden, not unmounted | Switching tabs never loses unsaved work |
 | Super Admin reuses Facility Admin endpoints | The facility view calls `getFacilitySummary(facilityId)` | `resolveFacility()` lets a Super Admin name any facility (§5.10) |
 
+### 5.12 The public website (porting a finished design)
+
+**🛠 Built (F6)** — the client's designer delivered a finished static site (one `index.html` with inline CSS and JS). Instead of rewriting it in React, it's **ported mechanically** into the app by `scripts/port-public-site.py`, which can be re-run whenever the designer sends a new version.
+
+```
+client's index.html ──port script──▶  site.generated.css   CSS, every rule scoped under .cs-site
+                                      markup.generated.ts  the <body> markup as a string (+ JSON-LD)
+                                      site.generated.js    the script, wrapped as initSite(root) → cleanup()
+                                            │
+                       SiteHome.tsx ◀───────┘  server-renders the markup, starts the script after mount,
+                       (route "/")              sends demo requests to data.submitDemoRequest()
+```
+
+**The three hard problems and how they were solved:**
+
+| Problem | Solution | Concept to name in an interview |
+|---|---|---|
+| The site's CSS (`:root`, `body`, `.btn`, `@keyframes ring`…) would leak into the app — and the app's into the site | Every selector prefixed with `.cs-site`; `:root`/`body` → `.cs-site`; `html` → `html:has(.cs-site)`; keyframes renamed `cs-*` | **CSS scoping / style isolation** (what CSS Modules and Shadow DOM do automatically) |
+| The site's script adds global listeners and timers, but Next.js hides and re-shows pages (it never "unloads") | While starting up, `EventTarget.prototype.addEventListener` is temporarily wrapped to *record* every listener; timers go through a tracker; `cleanup()` removes them all. Returning to the page resets the markup and starts fresh | **Lifecycle management / resource cleanup** — the "mount → unmount" contract every component must honour |
+| The form had no backend | `submitDemoRequest` in the script now calls the app's data layer → the Super Admin's Demo Requests | **Adapter** again (§5.6): the old code calls one function; we swapped what's behind it |
+
+**How "it looks the same" was proved, not assumed:** a script computed 17 style properties for all 803 elements on the original page and on the ported page and compared fingerprints. 792 matched exactly; the 11 differences were explained — one was a bug in the original ("See the takeaway" showed too early), which the port fixes.
+
+**Then made multi-page (for client review).** The one-page original was split into pages that follow the sitemap (§11) — `/`, `/training`, `/platform`, `/who-we-serve`, `/about`, `/contact` — reusing its sections unchanged:
+
+```
+port script ──▶ SITE_TOP · SITE_SECTIONS{hero, training, how, platform, …} · SITE_FOOTER · SITE_MODAL · SITE_CONTACT
+                                              │
+pages.ts  ──▶ SITE_PAGES = { training: ["training", "how", "cta"], platform: ["platform", "pricing", "cta"], … }
+              buildPageMarkup(key) = header + chosen sections + footer (+ demo popup)
+```
+
+The one-page assumptions in the designer's script were patched in the port script, each marked `// multi-page port`: the header is solid on pages without a hero; the home page's "Practice" button now opens `/training#scenario-N`; in-page anchors (`#training`) became routes (`/training`). Inner pages get a screen-reader-only `<h1>` naming the page, so headings run h1 → h2 → h3 without skipping (promoting the visible `<h2>` would have left its `<h3>`s skipping a level, and renaming tags would break the designer's tag-based CSS). This is **composition** — pages are lists of reusable parts, so regrouping them is a one-line change in `pages.ts`.
+
+**Other F6 decisions:** the public demo endpoint re-validates every field, caps lengths and ignores a duplicate within a minute (public endpoints can't trust the form); "Sign in" links added to the site; placeholder privacy/terms pages that say plainly they're placeholders (no invented legal text); the app adopted the site's brand (evergreen, cream, copper; Hanken Grotesk + Newsreader, self-hosted with `next/font`).
+
 ### 5.7 Edge cases
 
 | Situation | Handling |
@@ -625,6 +661,9 @@ A: Everything starts from one base query that turns each assignment into a row w
 
 **Q: How do non-developers manage the training content?**
 A: Content is data, not code. A Super Admin builds a module in an editor: details, the video link (its length is read automatically), decision points placed by scrubbing the preview, and a knowledge check. Modules start as drafts and can only be published once a checklist passes. After learners have answered, the server won't let anyone delete a decision point, question or option they used — it can be reworded but not removed — so learner records never point at missing content. That's referential integrity; in a database it's a foreign key, and a fuller system would add content versioning.
+
+**Q: The designer gave you a finished static HTML site. How did you integrate it?**
+A: I ported it with a script rather than rewriting it, so a new design version can be dropped in by re-running the script. The CSS is scoped under one wrapper class so it can't leak into the app, the markup is server-rendered for search engines, and the site's script is wrapped so it records every listener and timer it creates and removes them when the page is hidden — important because Next.js keeps visited pages alive. The demo form was connected to our data layer. I verified the result by comparing the computed styles of all 803 elements against the original.
 
 **Q: What are the security considerations?**
 A: Hashed passwords, HTTPS, server-side RBAC and tenant scoping, input validation, signed video URLs, and a strict no-patient-data policy.
@@ -753,6 +792,23 @@ Each entry follows the **ADR** (Architecture Decision Record) format — a real 
 | 60 | 2026-11-19 | LLD | Thumbnails: pick a bundled image or paste a link (no uploads) | No file storage in Phase 1; uploads belong with the real backend | Build an upload flow now |
 | 61 | 2026-11-19 | LLD | "Reset access" for a Facility Admin emails a reset link; the current password keeps working until used | Admin never sees or sets someone else's password | Admin sets a temporary password |
 | 62 | 2026-11-19 | LLD | Facility deactivation is a switch, not a delete; it signs out everyone at that facility | Contracts pause and resume; records must survive | Delete facility |
+| 63 | 2026-11-23 | HLD | The client's static site becomes the app's public pages (one domain, one deploy) | Demo requests reach the app; one thing to host and secure | Separate static site + later API hookup |
+| 64 | 2026-11-23 | LLD | Port with a re-runnable script instead of rewriting in React | Keeps the designer's work exact; new versions are a re-run, not a rewrite | Hand-convert ~2,400 lines to JSX |
+| 65 | 2026-11-23 | LLD | Site CSS scoped under `.cs-site`; keyframes prefixed | Neither the site nor the app can restyle the other | Load the CSS globally |
+| 66 | 2026-11-23 | LLD | Site script wrapped to record listeners/timers and clean them up; markup reset on return | Next.js keeps pages alive; without cleanup, listeners and timers pile up | Run the script once and hope |
+| 67 | 2026-11-23 | LLD | Public `submitDemoRequest` re-validates, caps lengths, de-duplicates within a minute | Anyone can call a public endpoint directly | Trust the form's checks |
+| 68 | 2026-11-23 | LLD | Placeholder privacy/terms pages that say they're placeholders | Legal text is client-supplied (scope doc §1.2); invented policy text is a risk | Generic template text |
+| 69 | 2026-11-23 | HLD | App adopts the site's brand; fonts self-hosted via `next/font` | One consistent product; no runtime requests to Google | Keep the placeholder palette |
+| 70 | 2026-11-23 | LLD | Demo toolbar hidden on marketing pages | The public site should look like the real thing | Show it everywhere |
+| 71 | 2026-11-24 | LLD | Copyright year read in the browser after hydration | Next.js 16 refuses `new Date()` during prerender (the value would be frozen at build time) | Hard-code the year |
+| 72 | 2026-11-24 | HLD | Public site split into pages following the sitemap, for client review | A real multi-page site is easier to review and matches §11 | Keep the one-page site |
+| 73 | 2026-11-24 | LLD | Pages composed from the original sections (`pages.ts`), not rewritten | Regrouping is a one-line change; the designer's copy stays exact | Hand-build each page |
+| 74 | 2026-11-24 | LLD | `/contact` shows the form inline; other pages keep the popup | A contact page should work without JavaScript popups; the popup stays handy elsewhere | Popup everywhere |
+| 75 | 2026-11-24 | LLD | Port script syntax-checks its generated script (`node --check`) and refuses to finish if it's broken | A broken generated file once reached the dev server | Rely on noticing errors in the browser |
+| 76 | 2026-11-24 | LLD | Inner pages: screen-reader-only `<h1>` + the designer's visible `<h2>` | Correct heading order without touching tag-based CSS | Promote h2→h1 (left h3s skipping a level) |
+| 77 | 2026-11-24 | LLD | `robots.txt` blocks everything until `SITE_ALLOW_INDEXING=true`; the app and auth pages are always disallowed; `sitemap.xml` lists only public pages | A demo on mock data shouldn't be indexed; launch is one setting | No robots file (search engines index the demo) |
+| 78 | 2026-11-24 | LLD | Favicon generated from the site's own mark (`app/icon.svg`) | One brand everywhere, kept in sync by the port script | Keep Next's default icon |
+| 79 | 2026-11-24 | LLD | Legal pages rendered inside the site's header/footer | Consistent site; the old separate layout looked like a different product | Separate simple layout |
 
 ---
 
@@ -777,3 +833,8 @@ Each entry follows the **ADR** (Architecture Decision Record) format — a real 
 | 2026-11-19 | CSS grid items default to `min-width: auto`, so a wide table inside a one-column grid stretched the whole page on phones. `grid-cols-1` (= `minmax(0, 1fr)`) lets the column shrink and the table scroll inside its card. |
 | 2026-11-19 | Hot reload doesn't always update a page that Next.js is keeping alive in the background — a stale class name looked like a failed fix. When a fix "doesn't work", reload before digging deeper. |
 | 2026-11-19 | Deleting is the dangerous operation in a content editor. Designing "what happens to learner records?" first led to the reword-not-remove rule. |
+| 2026-11-23 | "Looks the same" should be measured: fingerprinting computed styles of every element found 11 differences out of 803 — and one turned out to be a bug in the original. |
+| 2026-11-23 | Adding a URL hook to a component in the root layout broke the production build (needs `<Suspense>`). Small changes to shared layout pieces have wide effects — rebuild after touching them. |
+| 2026-11-24 | Next.js 16 rejects `new Date()` during prerender even in Client Components. Time-dependent output must happen at request time or in the browser after hydration. |
+| 2026-11-24 | A text-transform script broke the generated code because it edited a string *after* computing positions in it — the offsets were stale. Apply edits in an order where earlier changes can't move later targets, and verify the output automatically. |
+| 2026-11-24 | A review checklist (links, one h1, heading order, alt text, labels, favicon, robots/sitemap, phone width, keyboard) found six real issues that eyeballing the pages had missed. Automate the boring checks; look with human eyes for the rest. |

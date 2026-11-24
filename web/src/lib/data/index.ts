@@ -19,6 +19,7 @@ export {
   type AuthTokenPurpose,
   type CheckpointResult,
   type DataService,
+  type DemoRequestInput,
   type FacilityInput,
   type FacilityLearnerRow,
   type FacilityRow,

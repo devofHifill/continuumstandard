@@ -419,7 +419,7 @@ export function ScenarioPlayer({ bundle, onEnded, onDebug }: Props) {
       </div>
 
       {/* Controls */}
-      <div className="flex flex-col gap-2 bg-[#14201f] px-3 pt-2 pb-3 text-white">
+      <div className="flex flex-col gap-2 bg-primary-hover px-3 pt-2 pb-3 text-white">
         <Timeline
           currentTime={currentTime}
           duration={duration}

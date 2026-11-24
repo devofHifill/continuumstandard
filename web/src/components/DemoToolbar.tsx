@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button, Modal } from "@/components/ui";
 import { data } from "@/lib/data";
@@ -8,6 +8,9 @@ import { useHydrated, useSession } from "@/lib/data/hooks";
 import { DEMO_TOOLS_ENABLED, demoSignIn, listDemoAccounts } from "@/lib/data/mock/demo";
 import { endSession } from "@/components/shell/AuthGate";
 import { ROLE_LABEL, roleHome } from "@/lib/auth/roles";
+
+/** Public website pages — no demo toolbar there. */
+const MARKETING_PATHS = new Set(["/", "/training", "/platform", "/who-we-serve", "/about", "/contact", "/privacy", "/terms"]);
 
 /**
  * Floating demo toolbar (mock mode only): shows who you are, switches accounts
@@ -17,10 +20,13 @@ export function DemoToolbar() {
   const hydrated = useHydrated();
   const session = useSession();
   const router = useRouter();
+  const pathname = usePathname();
   const [confirmReset, setConfirmReset] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  if (!DEMO_TOOLS_ENABLED || !hydrated) return null;
+  // Keep the marketing pages clean: the toolbar is for trying the app, not the website.
+  const marketing = MARKETING_PATHS.has(pathname);
+  if (!DEMO_TOOLS_ENABLED || !hydrated || marketing) return null;
   const accounts = listDemoAccounts().filter((a) => a.status === "ACTIVE");
 
   async function switchTo(email: string) {

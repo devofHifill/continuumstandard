@@ -1,0 +1,115 @@
+/*
+ * Hand-written adjustments to the ported public site (the generated CSS is not edited).
+ *
+ * The app loads Tailwind's base reset ("preflight"); the original site relied on browser
+ * defaults in a few places. A computed-style comparison of all 803 elements against the
+ * original found these differences:
+ */
+
+/* Preflight sets <small> to 80%; the original used the browser default. */
+.cs-site small {
+  font-size: smaller;
+}
+
+/*
+ * Intentionally NOT restored: preflight makes `[hidden]` win over the site's `.btn` display,
+ * so the simulator's "See the takeaway" button now stays hidden until an answer is chosen —
+ * which is what the site's own script intends (on the original static page it showed early).
+ */
+
+/* ── Multi-page version (pages.ts) ─────────────────────────────────────────
+ * The original was one page whose header floated over a full-screen hero. Inner pages
+ * start with an ordinary section, so leave room for the fixed header above it.
+ * (The header itself turns solid on pages without a hero — see the port script.)
+ */
+/* (Inner pages begin with a screen-reader-only <h1>, so target the first *section*.) */
+.cs-site .site-page:not(.site-page--home) > section:first-of-type {
+  padding-top: calc(var(--section-y) + var(--header-h));
+}
+
+/* /privacy, /terms: placeholder legal pages in the site's own look. */
+.cs-site .legal-page__inner {
+  max-width: calc(46rem + var(--gutter) * 2);
+}
+.cs-site .legal-page h1 {
+  margin: 18px 0 28px;
+  font-size: var(--fs-h2);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+.cs-site .legal-page__notice {
+  margin-bottom: 28px;
+  padding: 18px 22px;
+  border: 1px solid var(--accent-light);
+  border-radius: var(--r-md);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+.cs-site .legal-page__notice p + p {
+  margin-top: 6px;
+}
+.cs-site .legal-page ul {
+  margin-top: 12px;
+  padding-left: 1.25rem;
+  list-style: disc;
+  color: var(--muted);
+}
+.cs-site .legal-page li + li {
+  margin-top: 6px;
+}
+
+/* /contact: intro and contact details beside the demo form (the modal's content, inline). */
+.cs-site .contact-page__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(32px, 5vw, 72px);
+  align-items: start;
+}
+@media (min-width: 960px) {
+  .cs-site .contact-page__grid {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  }
+}
+.cs-site .contact-page__intro h1 {
+  margin-top: 18px;
+  font-size: var(--fs-h2);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+.cs-site .contact-page__intro .modal__lead {
+  font-size: var(--fs-lead);
+  max-width: 34rem;
+}
+.cs-site .contact-page__details {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid var(--stone);
+}
+.cs-site .contact-page__details ul {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.cs-site .contact-page__details a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.cs-site .contact-page__details .site-footer__label {
+  color: var(--accent-text);
+}
+.cs-site .contact-page__card {
+  width: 100%;
+  max-height: none;
+  overflow: visible;
+  animation: none;
+  box-shadow: var(--shadow-float);
+}
+/* The contact name is styled for the dark footer; on the light contact page it needs dark text. */
+.cs-site .contact-page__details .site-footer__name {
+  color: var(--text);
+  font-weight: 500;
+}

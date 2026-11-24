@@ -10,6 +10,7 @@ import { useQuery } from "@/lib/data/hooks";
 import type { ActivityEvent } from "@/lib/types";
 
 const TYPE_LABEL: Record<ActivityEvent["type"], string> = {
+  LEAD_RECEIVED: "Demo request",
   FACILITY_CREATED: "Facility created",
   FACILITY_DEACTIVATED: "Facility deactivated",
   FACILITY_REACTIVATED: "Facility reactivated",
