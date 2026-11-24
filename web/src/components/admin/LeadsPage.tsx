@@ -24,7 +24,7 @@ export function LeadsPage() {
         <SearchInput label="Search" placeholder="Name, email or organization" value={search} onChange={setSearch} />
       </FilterBar>
       {q.status === "loading" && <p className="text-sm text-muted">Loading…</p>}
-      {q.status === "error" && <LoadError message={q.error.message} />}
+      {q.status === "error" && <LoadError error={q.error} onRetry={q.refetch} />}
       {q.status === "success" &&
         (rows.length === 0 ? (
           <EmptyState title={q.data.length ? "No requests match" : "No demo requests yet"}>

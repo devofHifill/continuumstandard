@@ -35,7 +35,7 @@ export function ProgressPage() {
       <PageHeader title="Learner Progress" description="Training status and knowledge-check results across your facility." />
 
       {q.status === "loading" && <p className="text-sm text-muted">Loading…</p>}
-      {q.status === "error" && <LoadError message={q.error.message} />}
+      {q.status === "error" && <LoadError error={q.error} onRetry={q.refetch} />}
       {q.status === "success" && all.length === 0 && (
         <EmptyState title="No assignments yet">
           <Link href="/facility/assignments" className="text-primary underline">

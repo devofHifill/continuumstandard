@@ -65,7 +65,7 @@ export interface OutboxEmail {
   createdAt: string;
 }
 
-export const MOCK_DB_VERSION = 3;
+export const MOCK_DB_VERSION = 4;
 
 /** Public test stream (Big Buck Bunny, ~10 min) used until the client's videos are hosted. */
 const SAMPLE_HLS = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8";
@@ -222,6 +222,8 @@ export function createSeed(): MockDb {
     moduleId: m.id,
     sourceUrl: SAMPLE_HLS,
     posterUrl: m.thumbnailUrl,
+    // One module carries placeholder captions so the captions control can be demonstrated (F7.3).
+    captionsUrl: m.id === "mod-intake" ? "/captions/sample-intake.vtt" : undefined,
     durationSec: SAMPLE_DURATION,
   }));
 

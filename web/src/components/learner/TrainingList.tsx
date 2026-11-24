@@ -45,7 +45,7 @@ export function TrainingList() {
       </div>
 
       {training.status === "loading" && <CardGridSkeleton count={3} />}
-      {training.status === "error" && <LoadError message={training.error.message} />}
+      {training.status === "error" && <LoadError error={training.error} onRetry={training.refetch} />}
       {training.status === "success" &&
         (shown.length === 0 ? (
           <EmptyState title={items.length === 0 ? "No training assigned yet" : "Nothing here"}>

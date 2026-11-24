@@ -40,7 +40,7 @@ export type QueryState<T> =
  * whenever the mock store changes or `key` changes. Intentionally tiny — a library
  * like TanStack Query can replace it when the real API arrives.
  */
-export function useQuery<T>(key: string, fn: () => Promise<T>): QueryState<T> {
+export function useQuery<T>(key: string, fn: () => Promise<T>): QueryState<T> & { refetch: () => void } {
   const [state, setState] = useState<QueryState<T> & { key?: string }>({ status: "loading" });
   const [version, setVersion] = useState(0);
 
@@ -59,7 +59,10 @@ export function useQuery<T>(key: string, fn: () => Promise<T>): QueryState<T> {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, version]);
 
+  // "Try again" after an error: run the query once more.
+  const refetch = () => setVersion((v) => v + 1);
+
   // A new key means the old result is stale — show loading until the new one arrives.
-  if (state.key !== undefined && state.key !== key) return { status: "loading" };
-  return state;
+  if (state.key !== undefined && state.key !== key) return { status: "loading", refetch };
+  return { ...state, refetch };
 }

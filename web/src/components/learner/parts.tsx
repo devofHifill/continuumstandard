@@ -3,7 +3,7 @@
 import Link from "next/link";
 import clsx from "clsx";
 import { Badge, type BadgeTone } from "@/components/ui";
-import type { MyTrainingItem } from "@/lib/data";
+import { ServiceError, type MyTrainingItem } from "@/lib/data";
 import { STATUS_LABEL, STEP_LABEL, type NextStep } from "@/lib/learning";
 import type { ID, ProgressStatus } from "@/lib/types";
 
@@ -132,10 +132,35 @@ export function EmptyState({ title, children }: { title: string; children?: Reac
   );
 }
 
-export function LoadError({ message }: { message: string }) {
+/** Error message for failed loads, with an optional "Try again" (F7.1). */
+/** Errors a retry can't fix: the thing is gone or isn't yours, so "Try again" would just fail again. */
+const FINAL_CODES = new Set(["NOT_FOUND", "FORBIDDEN"]);
+
+export function LoadError({
+  error,
+  message = error?.message ?? "Something went wrong.",
+  onRetry,
+}: {
+  error?: Error;
+  message?: string;
+  onRetry?: () => void;
+}) {
+  const canRetry = onRetry && !(error instanceof ServiceError && FINAL_CODES.has(error.code));
   return (
-    <div role="alert" className="rounded-lg bg-danger-soft px-4 py-3 text-sm text-danger">
-      {message}
+    <div
+      role="alert"
+      className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-danger-soft px-4 py-3 text-sm text-danger"
+    >
+      <span>{message}</span>
+      {canRetry && (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="h-8 shrink-0 rounded-md border border-danger/30 bg-surface px-3 font-medium text-danger hover:bg-danger-soft"
+        >
+          Try again
+        </button>
+      )}
     </div>
   );
 }

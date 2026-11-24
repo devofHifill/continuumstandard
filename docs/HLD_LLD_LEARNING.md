@@ -222,6 +222,8 @@ facilities 1──* users 1──* assignments *──1 training_modules
 
 ### 5.2 API endpoints (sample)
 
+> Full list with permissions: [BACKEND_HANDOVER.md §2](BACKEND_HANDOVER.md#2-operations--suggested-endpoints).
+
 ```
 POST /auth/login                       → returns session/token
 POST /auth/set-password                invite-link flow (D8)
@@ -583,6 +585,50 @@ The one-page assumptions in the designer's script were patched in the port scrip
 
 **Other F6 decisions:** the public demo endpoint re-validates every field, caps lengths and ignores a duplicate within a minute (public endpoints can't trust the form); "Sign in" links added to the site; placeholder privacy/terms pages that say plainly they're placeholders (no invented legal text); the app adopted the site's brand (evergreen, cream, copper; Hanken Grotesk + Newsreader, self-hosted with `next/font`).
 
+### 5.13 Errors, resilience and accessibility (QA & polish)
+
+**🛠 Built (F7)**
+
+**Every screen has four states, not one.** Beginners build the "it worked" screen. Real users also see:
+
+| State | What we show | Why |
+|---|---|---|
+| Loading | Skeleton or "Loading…" | The user knows something is happening |
+| Empty | A friendly "nothing here yet" with what to do next | An empty table looks broken |
+| Error | The message + **Try again** (if a retry could help) | The user isn't stuck |
+| Success | The real content | — |
+
+**Classify errors by what the user can do about them.** The data layer throws a `ServiceError` with a *code*, and the UI reacts to the code — not to the wording:
+
+```
+NETWORK          → "Can't reach the server" + Try again   (temporary — retry may work)
+NOT_FOUND        → "… not found", no retry button          (permanent — retrying is pointless)
+FORBIDDEN        → message, no retry
+UNAUTHENTICATED  → sign out, back to login                 (only this one ends the session)
+VALIDATION       → message next to the form field
+```
+
+A bug we fixed: at first, *any* error during "is my session still valid?" signed the user out — so a wifi blip logged people out. Now only `UNAUTHENTICATED` does. **Lesson for interviews: "fail safe" doesn't mean "fail by logging out".**
+
+**Three layers of error pages** (Next.js "error boundaries" — a boundary catches a crash in the part of the page below it):
+
+```
+app/global-error.tsx   ← the whole app crashed (even the layout) — must draw its own <html>
+app/error.tsx          ← a public page crashed
+app/(app)/error.tsx    ← a page inside the app crashed — the sidebar stays usable
+app/not-found.tsx      ← unknown URL → real HTTP 404
+```
+
+**Testing failure on purpose.** The demo toolbar has an **Online/Offline** switch that makes every mock call fail like a dropped connection. That's a tiny version of *chaos engineering*: break things deliberately to prove the app recovers.
+
+**Accessibility (a11y)** — WCAG AA is the usual legal/industry bar:
+- *Contrast*: text must be readable (4.5:1 ratio). We measured every page for every role.
+- *Keyboard*: everything works without a mouse. When a menu opens, focus moves into it; Escape closes it and puts focus back on the button that opened it — otherwise keyboard users get "lost".
+- *Honest roles*: the account menu is a **disclosure** (a button that shows a list), not an ARIA `menu`. `role="menu"` promises arrow-key navigation; claiming a role you don't implement is worse than no role.
+- *Captions*: training videos need them. The player shows a **CC** button when a WebVTT captions file exists.
+
+**Handover.** The frontend's last job is to make the backend's first job easy: [docs/BACKEND_HANDOVER.md](BACKEND_HANDOVER.md) maps every `DataService` method to an endpoint, lists the server rules as a checklist, and records known limitations. In an interview: *"the interface was the contract; the unit tests were the spec; the handover doc was the checklist."*
+
 ### 5.7 Edge cases
 
 | Situation | Handling |
@@ -592,6 +638,9 @@ The one-page assumptions in the designer's script were patched in the port scrip
 | Module deactivated after assignment | Existing assignments still work; can't be newly assigned |
 | Learner deactivated | Can't log in; history kept for reports |
 | Refresh mid-video | Resumes from saved position, answered checkpoints skipped |
+| Connection drops while browsing | Error message + **Try again**; user stays signed in (F7) |
+| Opening another facility's learner by URL | "Learner not found" — 404, no hint it exists, no retry button (F7) |
+| A page crashes | Error boundary shows "Something went wrong" with Try again; the app shell keeps working (F7) |
 
 ---
 
@@ -809,6 +858,13 @@ Each entry follows the **ADR** (Architecture Decision Record) format — a real 
 | 77 | 2026-11-24 | LLD | `robots.txt` blocks everything until `SITE_ALLOW_INDEXING=true`; the app and auth pages are always disallowed; `sitemap.xml` lists only public pages | A demo on mock data shouldn't be indexed; launch is one setting | No robots file (search engines index the demo) |
 | 78 | 2026-11-24 | LLD | Favicon generated from the site's own mark (`app/icon.svg`) | One brand everywhere, kept in sync by the port script | Keep Next's default icon |
 | 79 | 2026-11-24 | LLD | Legal pages rendered inside the site's header/footer | Consistent site; the old separate layout looked like a different product | Separate simple layout |
+| 80 | 2026-11-24 | LLD | Errors carry a code (`NETWORK`, `NOT_FOUND`, …) and the UI reacts to the code | Retry only where it can help; only `UNAUTHENTICATED` signs out | Match on message text; one generic error |
+| 81 | 2026-11-24 | LLD | Session re-check signs out only on `UNAUTHENTICATED`, not on any error | A wifi blip shouldn't log people out | Sign out on every failure ("fail safe") |
+| 82 | 2026-11-24 | LLD | `useQuery` exposes `refetch`; `LoadError` shows **Try again** | Users recover without reloading the page | Ask users to refresh |
+| 83 | 2026-11-24 | HLD | Layered error boundaries: global, public, in-app; real 404 page | A crash in one page keeps the app shell usable | One global error page |
+| 84 | 2026-11-24 | LLD | Account menu is a disclosure, not an ARIA `menu`; Escape returns focus | Don't promise keyboard behaviour we don't implement | `role="menu"` without arrow-key support |
+| 85 | 2026-11-24 | LLD | Captions via a WebVTT file on `ScenarioVideo.captionsUrl`; CC toggle in the player | Standard format every browser and video host supports | Burned-in captions (can't turn off, not searchable) |
+| 86 | 2026-11-24 | HLD | Backend handover doc: method → endpoint table, server-rule checklist, limitations | The interface is the contract; make the backend's first step obvious | Let the backend team read the mock code |
 
 ---
 
@@ -838,3 +894,7 @@ Each entry follows the **ADR** (Architecture Decision Record) format — a real 
 | 2026-11-24 | Next.js 16 rejects `new Date()` during prerender even in Client Components. Time-dependent output must happen at request time or in the browser after hydration. |
 | 2026-11-24 | A text-transform script broke the generated code because it edited a string *after* computing positions in it — the offsets were stale. Apply edits in an order where earlier changes can't move later targets, and verify the output automatically. |
 | 2026-11-24 | A review checklist (links, one h1, heading order, alt text, labels, favicon, robots/sitemap, phone width, keyboard) found six real issues that eyeballing the pages had missed. Automate the boring checks; look with human eyes for the rest. |
+| 2026-11-24 | Test the unhappy path on purpose. An offline switch showed that a network error during the session check logged users out — a bug that only appears when things go wrong. |
+| 2026-11-24 | A "Try again" button on "not found" is a small lie — retrying can never work. Decide UI behaviour by error *type*, not by "there was an error". |
+| 2026-11-24 | Keyboard focus must go somewhere sensible when the thing it was on disappears (a closed menu). Scripted checks found it; a mouse user would never notice. |
+| 2026-11-24 | Writing the handover doc caught claims the code didn't back up (the mock trusts "video completed"). Writing documentation is a review — check every sentence against the code. |

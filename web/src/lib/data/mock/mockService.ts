@@ -32,6 +32,7 @@ export { findByEmail, startSession } from "./helpers";
 export class MockDataService implements DataService {
   // ── Auth ────────────────────────────────────────────────
   async login(email: string, password: string) {
+    simulateNetwork(); // fail before signing in, never half-way
     const db = getDb();
     const user = findByEmail(email);
     // Same message for "no such user" and "wrong password" — don't reveal which emails exist.

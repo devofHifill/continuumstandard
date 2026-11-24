@@ -75,7 +75,7 @@ export function LearnersPage() {
       </FilterBar>
 
       {q.status === "loading" && <p className="text-sm text-muted">Loading learners…</p>}
-      {q.status === "error" && <LoadError message={q.error.message} />}
+      {q.status === "error" && <LoadError error={q.error} onRetry={q.refetch} />}
       {q.status === "success" &&
         (q.data.length === 0 ? (
           <EmptyState title="No learners yet">Add your first learner to start assigning training.</EmptyState>

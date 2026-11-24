@@ -64,6 +64,14 @@ export function ScenarioPlayer({ bundle, onEnded, onDebug }: Props) {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [notice, setNotice] = useState<string | null>(null);
   const [muted, setMuted] = useState(false);
+  // Captions (WCAG 1.2.2) — on by default when the client supplies a captions file.
+  const [captionsOn, setCaptionsOn] = useState(true);
+  const toggleCaptions = () => {
+    const track = videoRef.current?.textTracks[0];
+    if (!track) return;
+    track.mode = captionsOn ? "hidden" : "showing";
+    setCaptionsOn(!captionsOn);
+  };
 
   // Refs mirror state for the animation-frame loop and event listeners,
   // which must read the latest values without re-subscribing every render.
@@ -443,6 +451,13 @@ export function ScenarioPlayer({ bundle, onEnded, onDebug }: Props) {
           <IconButton label={muted ? "Unmute" : "Mute"} onClick={() => setMuted((m) => !m)}>
             <span className="text-xs font-semibold">{muted ? "Muted" : "Sound"}</span>
           </IconButton>
+          {video.captionsUrl && (
+            <IconButton label={captionsOn ? "Turn captions off" : "Turn captions on"} onClick={toggleCaptions}>
+              <span className={clsx("text-xs font-semibold", !captionsOn && "line-through opacity-70")} aria-hidden>
+                CC
+              </span>
+            </IconButton>
+          )}
           <IconButton label="Full screen" onClick={toggleFullscreen}>
             <FullscreenIcon />
           </IconButton>
