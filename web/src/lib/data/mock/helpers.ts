@@ -9,7 +9,22 @@ import { getDb, getNetworkFailure, getStoredSession, setStoredSession } from "./
 
 /** Small artificial delay so loading states are visible, like a real network. */
 export const LATENCY_MS = 150;
-export const delay = <T>(value: T) => new Promise<T>((r) => setTimeout(() => r(value), LATENCY_MS));
+/**
+ * Every mock response goes through here: a small artificial latency, and — when the demo's
+ * "simulate connection problems" switch is on — a NETWORK error instead, so loading and error
+ * states can be seen and tested in the browser (F7.1). Writes also check before changing data
+ * (simulateNetwork), so a failed write never half-applies.
+ */
+export const delay = <T>(value: T) =>
+  new Promise<T>((resolve, reject) =>
+    setTimeout(
+      () =>
+        getNetworkFailure()
+          ? reject(new ServiceError("NETWORK", "Can't reach the server. Check your connection and try again."))
+          : resolve(value),
+      LATENCY_MS,
+    ),
+  );
 export const clone = <T>(value: T): T => structuredClone(value);
 
 export function requireSession(): Session {

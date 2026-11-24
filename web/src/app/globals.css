@@ -1,30 +1,33 @@
 @import "tailwindcss";
 
 /*
- * Design tokens — placeholder palette until the client supplies brand assets.
- * Calm, clinical, trustworthy: deep teal primary, warm neutral surfaces.
+ * Design tokens — the client's brand from their public site (F6): deep evergreen,
+ * warm ivory surfaces, restrained copper accent; Hanken Grotesk + Newsreader.
  * Components use these tokens (e.g. bg-primary, text-muted), never raw hex.
+ * (The public site keeps its own copy of the palette, scoped under .cs-site.)
  */
 :root {
-  --background: #f7f8f8;
-  --surface: #ffffff;
-  --surface-muted: #eef1f1;
-  --foreground: #14201f;
-  --muted: #5b6b69;
-  --border: #d9e0df;
-  --primary: #0f6b66;
-  --primary-hover: #0b5753;
-  --primary-foreground: #ffffff;
-  --primary-soft: #e3f1ef;
-  --success: #1f7a3f;
-  --success-soft: #e4f4e9;
-  --warning: #9a5b00;
-  --warning-soft: #fbf0dc;
+  --background: #f6f1e7; /* cream */
+  --surface: #fbf8f2; /* paper */
+  --surface-muted: #efe7d8; /* ivory */
+  --foreground: #22241f; /* charcoal */
+  --muted: #51544d;
+  --border: #e2d8c7; /* soft stone */
+  --primary: #17322a; /* evergreen */
+  --primary-hover: #0f241e;
+  --primary-foreground: #f6f1e7;
+  --primary-soft: #e2e7dc; /* sage soft */
+  --accent: #a8623d; /* copper */
+  --accent-soft: #f0e0d3;
+  --success: #2e6b45;
+  --success-soft: #e2eee4;
+  --warning: #93502f; /* copper text, AA on light */
+  --warning-soft: #f5e7da;
   --danger: #b3261e;
   --danger-soft: #fbe7e6;
-  --info: #24589e;
-  --info-soft: #e6eef9;
-  --ring: #2a9d95;
+  --info: #2f5578;
+  --info-soft: #e4ebf1;
+  --ring: #a8623d;
 }
 
 @theme inline {
@@ -47,8 +50,10 @@
   --color-info: var(--info);
   --color-info-soft: var(--info-soft);
   --color-ring: var(--ring);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --font-sans: var(--font-hanken), "Helvetica Neue", Arial, sans-serif;
+  --font-display: var(--font-newsreader), Georgia, serif;
   --radius-card: 0.75rem;
 }
 

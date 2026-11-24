@@ -24,7 +24,7 @@ export function LeadsPage() {
         <SearchInput label="Search" placeholder="Name, email or organization" value={search} onChange={setSearch} />
       </FilterBar>
       {q.status === "loading" && <p className="text-sm text-muted">Loading…</p>}
-      {q.status === "error" && <LoadError message={q.error.message} />}
+      {q.status === "error" && <LoadError error={q.error} onRetry={q.refetch} />}
       {q.status === "success" &&
         (rows.length === 0 ? (
           <EmptyState title={q.data.length ? "No requests match" : "No demo requests yet"}>
@@ -51,7 +51,10 @@ export function LeadsPage() {
                       <span className="font-medium">{l.name}</span>
                       {l.role && <div className="text-xs text-muted">{l.role}</div>}
                     </Td>
-                    <Td>{l.organization}</Td>
+                    <Td>
+                      {l.organization}
+                      {l.facilities && <div className="text-xs text-muted">{l.facilities} facilit{l.facilities === "1" ? "y" : "ies"}</div>}
+                    </Td>
                     <Td>
                       <a href={`mailto:${l.email}`} className="text-primary hover:underline">
                         {l.email}

@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
-import { data } from "@/lib/data";
+import { data, ServiceError } from "@/lib/data";
 import { useSession } from "@/lib/data/hooks";
 import { canAccess, roleHome } from "@/lib/auth/roles";
 
@@ -52,7 +52,12 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const userId = session?.userId;
   useEffect(() => {
     if (!userId) return;
-    const check = () => void data.refreshSession().catch(() => endSession(router, "ended"));
+    // Only an answer of "this session is no longer valid" signs the user out. A network
+    // failure must not: a flaky connection would otherwise log people out mid-training.
+    const check = () =>
+      void data.refreshSession().catch((err) => {
+        if (err instanceof ServiceError && err.code === "UNAUTHENTICATED") void endSession(router, "ended");
+      });
     check();
     return data.subscribe(check);
   }, [userId, pathname, router]);

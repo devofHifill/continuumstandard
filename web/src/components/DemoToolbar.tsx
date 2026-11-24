@@ -1,26 +1,34 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button, Modal } from "@/components/ui";
 import { data } from "@/lib/data";
 import { useHydrated, useSession } from "@/lib/data/hooks";
-import { DEMO_TOOLS_ENABLED, demoSignIn, listDemoAccounts } from "@/lib/data/mock/demo";
+import { DEMO_TOOLS_ENABLED, demoSignIn, getNetworkFailure, listDemoAccounts, setNetworkFailure } from "@/lib/data/mock/demo";
 import { endSession } from "@/components/shell/AuthGate";
 import { ROLE_LABEL, roleHome } from "@/lib/auth/roles";
 
+/** Public website pages — no demo toolbar there. */
+const MARKETING_PATHS = new Set(["/", "/training", "/platform", "/who-we-serve", "/about", "/contact", "/privacy", "/terms"]);
+
 /**
- * Floating demo toolbar (mock mode only): shows who you are, switches accounts
- * in one click, and resets the demo data. Hidden when NEXT_PUBLIC_DEMO_TOOLS=false.
+ * Floating demo toolbar (mock mode only): shows who you are, switches accounts in one click,
+ * simulates a lost connection (every request fails — to see loading/error states, F7.1),
+ * and resets the demo data. Hidden when NEXT_PUBLIC_DEMO_TOOLS=false.
  */
 export function DemoToolbar() {
   const hydrated = useHydrated();
   const session = useSession();
   const router = useRouter();
+  const pathname = usePathname();
   const [confirmReset, setConfirmReset] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [offline, setOffline] = useState(getNetworkFailure);
 
-  if (!DEMO_TOOLS_ENABLED || !hydrated) return null;
+  // Keep the marketing pages clean: the toolbar is for trying the app, not the website.
+  const marketing = MARKETING_PATHS.has(pathname);
+  if (!DEMO_TOOLS_ENABLED || !hydrated || marketing) return null;
   const accounts = listDemoAccounts().filter((a) => a.status === "ACTIVE");
 
   async function switchTo(email: string) {
@@ -74,6 +82,19 @@ export function DemoToolbar() {
             Sign out
           </Button>
         )}
+        <Button
+          size="sm"
+          variant={offline ? "danger" : "ghost"}
+          className="shrink-0"
+          aria-pressed={offline}
+          title="Make every request fail, as if the connection dropped"
+          onClick={() => {
+            setNetworkFailure(!offline);
+            setOffline(!offline);
+          }}
+        >
+          {offline ? "Offline" : "Online"}
+        </Button>
         <Button
           size="sm"
           variant="secondary"

@@ -85,6 +85,7 @@ function AssignForm({ preselected }: { preselected: string | null }) {
         <fieldset>
           <legend className="mb-2 text-sm font-semibold">1. Modules</legend>
           {modules.status === "loading" && <p className="text-sm text-muted">Loading…</p>}
+          {modules.status === "error" && <LoadError error={modules.error} onRetry={modules.refetch} />}
           {modules.status === "success" && modules.data.length === 0 && (
             <p className="text-sm text-muted">No published modules are available yet.</p>
           )}
@@ -133,7 +134,15 @@ function AssignForm({ preselected }: { preselected: string | null }) {
             </Button>
           </div>
           <div className="max-h-72 overflow-y-auto rounded-lg border border-border">
-            {shown.length === 0 && <p className="px-4 py-3 text-sm text-muted">No learners match.</p>}
+            {learners.status === "loading" && <p className="px-4 py-3 text-sm text-muted">Loading…</p>}
+            {learners.status === "error" && (
+              <p role="alert" className="px-4 py-3 text-sm text-danger">
+                Couldn&apos;t load learners. {learners.error.message}
+              </p>
+            )}
+            {learners.status === "success" && shown.length === 0 && (
+              <p className="px-4 py-3 text-sm text-muted">No learners match.</p>
+            )}
             <ul className="divide-y divide-border">
               {shown.map((r) => {
                 const has = moduleIds.filter((m) => already.has(`${r.user.id}:${m}`)).length;
@@ -200,7 +209,7 @@ function AssignmentList() {
         <SearchInput label="Search" placeholder="Learner or module" value={search} onChange={setSearch} />
       </FilterBar>
       {q.status === "loading" && <p className="text-sm text-muted">Loading…</p>}
-      {q.status === "error" && <LoadError message={q.error.message} />}
+      {q.status === "error" && <LoadError error={q.error} onRetry={q.refetch} />}
       {q.status === "success" &&
         (rows.length === 0 ? (
           <EmptyState title={q.data.length ? "No assignments match" : "No assignments yet"} />

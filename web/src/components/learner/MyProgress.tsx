@@ -17,7 +17,7 @@ export function MyProgress() {
     <>
       <PageHeader title="My Progress" description="Your training status and knowledge-check results." />
       {training.status === "loading" && <p className="text-sm text-muted">Loading…</p>}
-      {training.status === "error" && <LoadError message={training.error.message} />}
+      {training.status === "error" && <LoadError error={training.error} onRetry={training.refetch} />}
       {training.status === "success" && (
         <div className="flex flex-col gap-6">
           {items.length === 0 ? (
@@ -80,7 +80,13 @@ export function MyProgress() {
               <h2 className="font-semibold">Activity history</h2>
             </CardHeader>
             <CardBody>
-              {activity.status === "success" && activity.data.length === 0 && (
+              {activity.status === "loading" && <p className="text-sm text-muted">Loading…</p>}
+                {activity.status === "error" && (
+                  <p role="alert" className="text-sm text-danger">
+                    Couldn&apos;t load activity. {activity.error.message}
+                  </p>
+                )}
+                {activity.status === "success" && activity.data.length === 0 && (
                 <p className="text-sm text-muted">No activity yet.</p>
               )}
               {activity.status === "success" && activity.data.length > 0 && (

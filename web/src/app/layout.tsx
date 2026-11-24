@@ -1,16 +1,24 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Suspense } from "react";
+import { Hanken_Grotesk, Newsreader } from "next/font/google";
 import { DemoToolbar } from "@/components/DemoToolbar";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+/**
+ * Brand fonts from the client's site (F6): Hanken Grotesk for UI/body, Newsreader for
+ * display headings. next/font self-hosts them, so no request goes to Google at runtime.
+ */
+const hanken = Hanken_Grotesk({
+  variable: "--font-hanken",
   subsets: ["latin"],
+  weight: ["400", "500", "600"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const newsreader = Newsreader({
+  variable: "--font-newsreader",
   subsets: ["latin"],
+  style: ["normal", "italic"],
+  axes: ["opsz"],
 });
 
 export const metadata: Metadata = {
@@ -20,10 +28,13 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+    <html lang="en" className={`${hanken.variable} ${newsreader.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col font-sans">
         {children}
-        <DemoToolbar />
+        {/* The toolbar reads the URL path (it hides on marketing pages), so it needs a Suspense boundary. */}
+        <Suspense fallback={null}>
+          <DemoToolbar />
+        </Suspense>
       </body>
     </html>
   );

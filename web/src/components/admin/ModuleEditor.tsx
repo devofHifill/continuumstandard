@@ -31,7 +31,7 @@ export function ModuleEditor() {
         ← Training Content
       </Link>
       {q.status === "loading" && <p className="text-sm text-muted">Loading…</p>}
-      {q.status === "error" && <LoadError message={q.error.message} />}
+      {q.status === "error" && <LoadError error={q.error} onRetry={q.refetch} />}
       {q.status === "success" && (
         <>
           <Header bundle={q.data} />

@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["--prefix", "web", "run", "dev"],
       "port": 3000
+    },
+    {
+      "name": "public-site",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "5500", "--bind", "127.0.0.1", "--directory", "D:/Projects/2026/continuum-standard-public-site"],
+      "port": 5500
     }
   ]
 }

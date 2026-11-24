@@ -10,6 +10,7 @@ import { useQuery } from "@/lib/data/hooks";
 import type { ActivityEvent } from "@/lib/types";
 
 const TYPE_LABEL: Record<ActivityEvent["type"], string> = {
+  LEAD_RECEIVED: "Demo request",
   FACILITY_CREATED: "Facility created",
   FACILITY_DEACTIVATED: "Facility deactivated",
   FACILITY_REACTIVATED: "Facility reactivated",
@@ -53,7 +54,7 @@ export function ActivityPage() {
         />
       </FilterBar>
       {q.status === "loading" && <p className="text-sm text-muted">Loading…</p>}
-      {q.status === "error" && <LoadError message={q.error.message} />}
+      {q.status === "error" && <LoadError error={q.error} onRetry={q.refetch} />}
       {q.status === "success" &&
         (q.data.length === 0 ? (
           <EmptyState title="No activity matches" />

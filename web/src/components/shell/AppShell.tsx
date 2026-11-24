@@ -26,6 +26,17 @@ export function AppShell({ children }: { children: ReactNode }) {
     setMenuOpen(false);
   }
 
+  // Keyboard users: focus moves into the phone menu when it opens and back to the
+  // "Open menu" button when it closes (F7.3).
+  const drawerRef = useRef<HTMLElement>(null);
+  const openButtonRef = useRef<HTMLButtonElement>(null);
+  const wasOpen = useRef(false);
+  useEffect(() => {
+    if (menuOpen) drawerRef.current?.querySelector<HTMLElement>("nav a")?.focus();
+    else if (wasOpen.current) openButtonRef.current?.focus();
+    wasOpen.current = menuOpen;
+  }, [menuOpen]);
+
   useEffect(() => {
     if (!menuOpen) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setMenuOpen(false);
@@ -58,7 +69,12 @@ export function AppShell({ children }: { children: ReactNode }) {
             className="absolute inset-0 bg-black/40"
             onClick={() => setMenuOpen(false)}
           />
-          <aside className="relative flex h-full w-72 max-w-[85%] flex-col bg-surface shadow-xl">
+          <aside
+            ref={drawerRef}
+            id="mobile-menu"
+            aria-label="Menu"
+            className="relative flex h-full w-72 max-w-[85%] flex-col bg-surface shadow-xl"
+          >
             <Sidebar session={session} onClose={() => setMenuOpen(false)} />
           </aside>
         </div>
@@ -68,8 +84,10 @@ export function AppShell({ children }: { children: ReactNode }) {
         <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-surface/95 px-4 backdrop-blur">
           <button
             type="button"
+            ref={openButtonRef}
             aria-label="Open menu"
             aria-expanded={menuOpen}
+            aria-controls="mobile-menu"
             onClick={() => setMenuOpen(true)}
             className="-ml-1 flex size-9 items-center justify-center rounded-md hover:bg-surface-muted md:hidden"
           >
@@ -102,7 +120,7 @@ function Sidebar({ session, onClose }: { session: Session; onClose?: () => void 
     <>
       <div className="flex items-start justify-between gap-2 border-b border-border px-5 py-4">
         <div className="min-w-0">
-          <Link href={roleHome(session.role)} className="block font-semibold leading-tight">
+          <Link href={roleHome(session.role)} className="block font-display text-lg leading-tight text-primary">
             The Continuum-Standard
           </Link>
           <p className="mt-1 truncate text-sm text-muted">
@@ -151,6 +169,7 @@ function Sidebar({ session, onClose }: { session: Session; onClose?: () => void 
 function UserMenu({ session }: { session: Session }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -158,7 +177,11 @@ function UserMenu({ session }: { session: Session }) {
     const onDown = (e: MouseEvent) => {
       if (!ref.current?.contains(e.target as Node)) setOpen(false);
     };
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setOpen(false);
+      buttonRef.current?.focus(); // don't strand keyboard focus on a link that just vanished
+    };
     document.addEventListener("mousedown", onDown);
     document.addEventListener("keydown", onKey);
     return () => {
@@ -179,9 +202,11 @@ function UserMenu({ session }: { session: Session }) {
   return (
     <div ref={ref} className="relative">
       <button
+        ref={buttonRef}
         type="button"
-        aria-haspopup="menu"
         aria-expanded={open}
+        aria-controls="user-menu"
+        aria-label={`Account: ${session.name}`}
         onClick={() => setOpen((o) => !o)}
         className="flex items-center gap-2 rounded-lg py-1 pr-2 pl-1 hover:bg-surface-muted"
       >
@@ -191,8 +216,10 @@ function UserMenu({ session }: { session: Session }) {
         <span className="hidden max-w-40 truncate text-sm font-medium sm:block">{session.name}</span>
       </button>
       {open && (
+        // A disclosure (button + list), not role="menu": an ARIA menu promises arrow-key
+        // navigation; this is a short list reached with Tab, closed with Escape.
         <div
-          role="menu"
+          id="user-menu"
           className="absolute right-0 mt-2 w-56 overflow-hidden rounded-lg border border-border bg-surface py-1 shadow-lg"
         >
           <div className="border-b border-border px-3 py-2">
@@ -200,7 +227,6 @@ function UserMenu({ session }: { session: Session }) {
             <p className="truncate text-xs text-muted">{session.email}</p>
           </div>
           <Link
-            role="menuitem"
             href="/profile"
             onClick={() => setOpen(false)}
             className="block px-3 py-2 text-sm hover:bg-surface-muted"
@@ -208,7 +234,6 @@ function UserMenu({ session }: { session: Session }) {
             Profile
           </Link>
           <button
-            role="menuitem"
             type="button"
             onClick={signOut}
             className="block w-full px-3 py-2 text-left text-sm hover:bg-surface-muted"

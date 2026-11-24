@@ -13,6 +13,10 @@ Other scripts: `npm run build`, `npm run lint`, `npm test` (Vitest unit tests).
 
 Video engine proof of concept: sign in as Jordan Lee or Alex Rivera and open `/poc`.
 
+Public website (the client's marketing site, ported from their static HTML — see below): `/`, `/training`, `/platform`,
+`/who-we-serve`, `/about`, `/contact`; `/privacy` and `/terms` are placeholders. Which sections go on which page is set in
+`src/components/site/pages.ts`.
+
 Signed-in areas: `/admin` (Super Admin), `/facility` (Facility Admin), `/learn` (Learner), `/profile` (everyone).
 Full learner journey: sign in as Jordan Lee (not started) or Alex Rivera (one in progress, one completed); Casey Diaz has nothing assigned.
 Facility admin: Dana Whitfield (Harbor Light) or Sam Okafor (Pinecrest) — add a learner, open their invite from the demo notice, assign training, then check Learner Progress.
@@ -54,6 +58,19 @@ src/
   lib/content.ts        content validation + publish checklist (unit-tested)
   components/player/    ScenarioPlayer, CheckpointPanel, Timeline
 ```
+
+**Public site:** `src/components/site/*.generated.*` are produced by `scripts/port-public-site.py`
+from the client's `index.html` — don't edit them; change the source site and re-run:
+
+```bash
+python scripts/port-public-site.py path/to/index.html
+```
+
+Hand-written adjustments go in `src/components/site/site-overrides.css`. The script also writes the browser-tab icon
+(`src/app/icon.svg`) from the site's favicon.
+
+Search engines: `robots.txt` blocks everything until `SITE_ALLOW_INDEXING=true` is set in production; `sitemap.xml`
+lists the public pages. Update `SITE_BASE_URL` in `src/components/site/metadata.ts` once the live domain is confirmed.
 
 **Rule:** pages talk only to `data` from `@/lib/data`, never to the mock files directly
 (the demo tools are the one exception). That keeps the switch to a real API a one-line change.

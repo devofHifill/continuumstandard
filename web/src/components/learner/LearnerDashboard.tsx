@@ -39,7 +39,7 @@ export function LearnerDashboard() {
     <>
       <PageHeader title={`Welcome, ${session.name.split(/\s+/)[0]}`} description="Your training at a glance." />
 
-      {training.status === "error" && <LoadError message={training.error.message} />}
+      {training.status === "error" && <LoadError error={training.error} onRetry={training.refetch} />}
       {training.status === "loading" && <CardGridSkeleton />}
 
       {training.status === "success" && (
@@ -114,6 +114,12 @@ export function LearnerDashboard() {
                 </h2>
               </CardHeader>
               <CardBody>
+                {activity.status === "loading" && <p className="text-sm text-muted">Loading…</p>}
+                {activity.status === "error" && (
+                  <p role="alert" className="text-sm text-danger">
+                    Couldn&apos;t load activity. {activity.error.message}
+                  </p>
+                )}
                 {activity.status === "success" && activity.data.length === 0 && (
                   <p className="text-sm text-muted">Nothing yet — your training activity will show here.</p>
                 )}

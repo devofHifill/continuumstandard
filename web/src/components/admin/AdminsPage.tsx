@@ -49,8 +49,13 @@ export function AdminsPage() {
         <Select label="Facility" value={facilityId} onChange={setFacilityId} options={[{ value: "ALL", label: "All facilities" }, ...facilityOptions]} />
       </FilterBar>
 
+      {facilities.status === "error" && (
+        <div className="mb-4">
+          <LoadError message={`Couldn't load the facility list. ${facilities.error.message}`} />
+        </div>
+      )}
       {admins.status === "loading" && <p className="text-sm text-muted">Loading…</p>}
-      {admins.status === "error" && <LoadError message={admins.error.message} />}
+      {admins.status === "error" && <LoadError error={admins.error} onRetry={admins.refetch} />}
       {admins.status === "success" &&
         (rows.length === 0 ? (
           <EmptyState title="No Facility Admins match" />

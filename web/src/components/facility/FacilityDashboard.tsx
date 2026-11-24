@@ -27,7 +27,7 @@ export function FacilityDashboard() {
         description={q.data ? q.data.facility.name : "Your facility at a glance."}
       />
       {q.status === "loading" && <p className="text-sm text-muted">Loading…</p>}
-      {q.status === "error" && <LoadError message={q.error.message} />}
+      {q.status === "error" && <LoadError error={q.error} onRetry={q.refetch} />}
       {q.status === "success" && (
         <div className="flex flex-col gap-6">
           <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">

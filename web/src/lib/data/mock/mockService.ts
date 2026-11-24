@@ -24,6 +24,7 @@ import * as content from "./content";
 import * as facility from "./facility";
 import * as learner from "./learner";
 import * as platform from "./platform";
+import * as publicSite from "./publicSite";
 import { getDb, getStoredSession, resetStore, setStoredSession, subscribe, updateDb } from "./store";
 
 export { findByEmail, startSession } from "./helpers";
@@ -31,6 +32,7 @@ export { findByEmail, startSession } from "./helpers";
 export class MockDataService implements DataService {
   // ── Auth ────────────────────────────────────────────────
   async login(email: string, password: string) {
+    simulateNetwork(); // fail before signing in, never half-way
     const db = getDb();
     const user = findByEmail(email);
     // Same message for "no such user" and "wrong password" — don't reveal which emails exist.
@@ -334,6 +336,9 @@ export class MockDataService implements DataService {
   assignTraining = facility.assignTraining;
   listFacilityAssignments = facility.listFacilityAssignments;
   getLearnerReport = facility.getLearnerReport;
+
+  // ── Public website (F6) — ./publicSite.ts ───────────────
+  submitDemoRequest = publicSite.submitDemoRequest;
 
   // ── Platform administration (F5) — ./platform.ts ────────
   getPlatformSummary = platform.getPlatformSummary;

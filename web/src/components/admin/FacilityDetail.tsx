@@ -25,7 +25,7 @@ export function FacilityDetail() {
         ← Facilities
       </Link>
       {summary.status === "loading" && <p className="text-sm text-muted">Loading…</p>}
-      {summary.status === "error" && <LoadError message={summary.error.message} />}
+      {summary.status === "error" && <LoadError error={summary.error} onRetry={summary.refetch} />}
       {summary.status === "success" && (
         <>
           <PageHeader
@@ -49,6 +49,8 @@ export function FacilityDetail() {
                 </Link>
               </CardHeader>
               <CardBody>
+                {admins.status === "loading" && <p className="text-sm text-muted">Loading…</p>}
+                {admins.status === "error" && <LoadError error={admins.error} onRetry={admins.refetch} />}
                 <ul className="flex flex-col divide-y divide-border">
                   {(admins.data ?? [])
                     .filter((a) => a.user.facilityId === facilityId)
@@ -89,6 +91,12 @@ export function FacilityDetail() {
             <CardHeader>
               <h2 className="font-semibold">Learners</h2>
             </CardHeader>
+            {learners.status === "loading" && <p className="px-5 py-4 text-sm text-muted">Loading…</p>}
+            {learners.status === "error" && (
+              <div className="px-5 py-4">
+                <LoadError error={learners.error} onRetry={learners.refetch} />
+              </div>
+            )}
             <Table>
               <caption className="sr-only">Learners at this facility</caption>
               <thead>
